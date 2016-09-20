@@ -17,3 +17,4 @@ search/fits/OTHER/
 search/fits/ProxCenHubbleSpectrum.txt
 scripts/*.pdf
 scripts/diagnostics
+scripts/*test*
