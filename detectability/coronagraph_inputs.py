@@ -2,10 +2,12 @@
 """
 Created on Wed Sep 14 16:58:44 2016
 
-@author: dflemin3
+@author: dflemin3 [David P. Fleming, University of Washington]
+
+@email: dflemin3 (at) uw (dot) edu
 
 Typical coronagraph noise routine parameters adapted from Robinson et al 2016
-and Meadows et al 2016 for future coronagraphs
+and Meadows et al 2016 for future coronagraphs.
 """
 
 # Quantum efficiency
@@ -27,8 +29,9 @@ NEZ = 1.0
 # Exozodaical light surface brightness in mag/arcsec^2 in the V band
 MEZV = 22.0
 
-# Coronagraph design constrast
-C = 1.0e-10 # Expected for future corornagrpah (TMT,LUVOIR,from Meadows et al 2016)
+# Coronagraph design constrast for space-based telescopes
+#C = 1.0e-10 # Expected for future corornagrpah (TMT,LUVOIR,from Meadows et al 2016)
+C = 1.0e-5 # Conservative coronagraph design contrast for ground-based telescopes
 
 # Dark count rate [/s]
 DE = 1.0e-4 # Value from Meadows et al 2016
