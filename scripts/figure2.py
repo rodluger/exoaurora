@@ -16,7 +16,7 @@ import numpy as np
 np.random.seed(123)
 
 # Build up FAP
-search.Compute(plot = False, fap_iter = 5000)
+#search.Compute(plot = False, fap_iter = 5000)
 
 # Injection detection plot (8 sigma)
 search.Plot(frame = 'planet', inject_contrast = 8e-3, crop_outliers = True, fap_iter = 0,
