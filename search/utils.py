@@ -550,7 +550,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   # We'll save these to disk and add to the array each time we run the script
   fap_file = os.path.join(os.path.dirname(__file__), 'fits', 'fap.npz')
   bflx_fap = np.array(bflx)
-  if load_fap:
+  if load_fap and os.path.exists(fap_file):
     bflx_fap = np.append(bflx_fap, np.load(fap_file)['bflx_fap'])
   for f in range(fap_iter):
     bflxf = np.zeros_like(bin_centers)
