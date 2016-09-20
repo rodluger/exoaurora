@@ -26,4 +26,3 @@ respectively.
 
 The link to the Meadows et al. 2016 spectra we used are
 [here](http://vpl.astro.washington.edu/spectra/stellar/proxcen.htm)
-
