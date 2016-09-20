@@ -288,12 +288,11 @@ def RemoveStellarLines(wav, flx, weights = None, npc = 5, inds = None):
   return flx
 
 def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot = True, 
-            plot_sz = 10, npc = 25, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
+            plot_sz = 10, npc = 10, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
             bin_sz = 0.1, mask_star = True, med_mask_sz = 5,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
-            high_pass_filter = True, crop_outliers = True, stack_lims = None, fap_iter = 0,
-            clobber = False, quiet = False, plot_gaussian_fit = False, filter = 'True',
-            load_fap = True):
+            high_pass_filter = True, crop_outliers = True, stack_lims = [(0.9840, 1.0160), (0.9960, 1.0090)], 
+            fap_iter = 0, clobber = False, quiet = False, plot_gaussian_fit = False, filter = 'True'):
   '''
   
   '''
@@ -425,12 +424,14 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   
   # The figure
   if plot:
-  
     fig = pl.figure(figsize = (10,10))
     ax = [None, None, None, None]
     ax[0] = pl.subplot2grid((8, 8), (0, 0), colspan=8, rowspan=6)
     ax[1] = pl.subplot2grid((8, 8), (6, 0), colspan=8, rowspan=1, sharex = ax[0])
     ax[2] = pl.subplot2grid((8, 8), (7, 0), colspan=8, rowspan=1, sharex = ax[0])
+  else:
+    fig = None
+    ax = None
     
   # Loop over spectra
   if not quiet: print("Stacking spectra...")
@@ -546,13 +547,12 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   pad = int(0.05 * len(bin_centers))
   bin_centers = bin_centers[pad:-pad]
   bflx = bflx[pad:-pad]
-    
+  
+  # This is the signal in the bin centered at the line
+  signal = bflx[len(bflx) // 2]
+  
   # Generate a histogram to compute the false alarm probability
-  # We'll save these to disk and add to the array each time we run the script
-  fap_file = os.path.join(os.path.dirname(__file__), 'fap.npz')
   bflx_fap = np.array(bflx)
-  if load_fap and os.path.exists(fap_file):
-    bflx_fap = np.append(bflx_fap, np.load(fap_file)['bflx_fap'])
   for f in range(fap_iter):
     bflxf = np.zeros_like(bin_centers)
     bnrm = np.zeros_like(bin_centers)
@@ -564,25 +564,17 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     bflxf /= bnrm
     bflxf = bflxf[pad:-pad]
     bflx_fap = np.append(bflx_fap, bflxf)
-  if inject_contrast == 0:
-    np.savez(fap_file, bflx_fap = bflx_fap)
     
   # The detection significance
   std = np.nanstd(bflx_fap)
   sig = (bflx[len(bflx) // 2] - 1) / std
-    
-  # Print some info
-  if not quiet:
-    print('Total integration time: %.1f hours' % (total_exp / 3600.))
-    print('Number of samples in FAP calculation: %d' % len(bflx_fap))
-    print('Significance (sigma): %.2f' % sig)
-    
+        
   # Compute the false alarm probability: number of bins with at least the 
   # significance of the detection, divided by total number of bins
   nb = len(np.where(np.abs(bflx_fap - 1) / std >= sig)[0])
   fap = nb / len(bflx_fap)
   
-  if (fap < 1e-4) and (sig > 0):
+  if (sig > 0):
     fap_mult, fap_exp = [int(n) for n in ("%.0e" % fap).split("e")]
     if nb == 1:
       fap_sgn = "<"
@@ -618,7 +610,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     rect = Rectangle((0.125 + 0.01, 0.36 - 0.055 + 0.01), 0.26, 0.245, facecolor='w', edgecolor='k',
                       transform=fig.transFigure, alpha = 0.85, zorder=1)
     fig.patches.append(rect)
-  
+
   # The binned flux
   if plot:
     ax[2].plot(bin_centers, bflx, 'k.', alpha = 0.1)
@@ -627,6 +619,12 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     lo, hi = np.min(bflx), np.max(bflx)
     rng = hi - lo
     ax[2].set_ylim(lo - 0.1 * rng, hi + 0.1 * rng)
+  
+  # Print some info
+  if not quiet:
+    print('Total integration time: %.1f hours' % (total_exp / 3600.))
+    print('Number of samples in FAP calculation: %d' % len(bflx_fap))
+    print('Significance (sigma): %.2f' % sig)
   
   # Appearance
   if plot:
@@ -660,66 +658,49 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     ax[0].plot(0, 0, color = 'g', lw = 2, label = 'Earth')
     ax[0].plot(0, 0, color = 'r', lw = 2, label = 'Star')
     ax[0].legend(loc = 'upper right', fontsize = 20)
-    return fig, ax
-  else:
-    return sig
 
-def Search(orb_iter = 50, inclination = np.arange(20., 90., 1.), **kwargs):
+  return {'fig': fig, 'ax': ax, 'signal': bflx[len(bflx) // 2],
+          'bins': bin_centers, 'bflx': bflx, 'std': std, 'snr': sig}
+
+def Search(inclination = np.arange(20., 90., 1.), 
+           period = np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.001),
+           mean_longitude = np.arange(110. - 3 * 8., 110. + 3 * 8.), 
+           stellar_mass = [0.120], **kwargs):
   '''
   
   '''
+  
+  import time
+  t = 0
   
   # Get the data
   data = GetData()
   planet = ProxCenB()
-  kwargs.update({'data': data, 'quiet': True, 'load_fap': False})
+  kwargs.update({'data': data, 'quiet': True})
   
+  # Get the number of bins
+  wpca_sz = kwargs.get('wpca_sz', 250)
+  bin_sz = kwargs.get('bin_sz', 0.1)
+  nbins = int((wpca_sz / bin_sz - 1) - 2 * int(0.05 * (wpca_sz / bin_sz - 1)))
+
   # Loop over planet params
-  sig = np.zeros_like(inclination)
-  par = [None for i in range(len(sig))]
-  for i, inc in enumerate(inclination):
-    print("Iteration %d/%d..." % (i + 1, len(inclination)))
-    s = []
-    p = []
-    planet.inclination = inc
-    planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
-
-    if orb_iter > 1:
-      for j in range(orb_iter): 
-        planet.period = np.random.normal(11.186, 0.002)
-        planet.stellar_mass = np.random.normal(0.120, 0.015)
-        planet.mean_longitude = np.random.normal(110., 8.)
-        s.append(Compute(planet = planet, plot = False, **kwargs))
-        p.append([planet.inclination, planet.mass, planet.period, planet.stellar_mass, planet.mean_longitude])
-    else:
-      s.append(Compute(planet = planet, plot = False, **kwargs))
-      p.append([planet.inclination, planet.mass, planet.period, planet.stellar_mass, planet.mean_longitude])
-    sig[i] = np.nanmax(s)
-    par[i] = p[np.nanargmax(s)]
-
-  # Plot the inclination - signal strength plot
-  fig = pl.figure()
-  pl.plot(inclination, sig, 'bo')
-  pl.plot(inclination, sig, 'b-', alpha = 0.2)
-  pl.xlabel('Inclination (degrees)')
-  pl.ylabel('Max signal strength (sigma)')
-  fig.savefig('inclination_vs_signal2.pdf')
-  np.savez(os.path.join(os.path.dirname(__file__), 'search.npz'), inclination = inclination, sig = sig)
-  
-  # Plot best solution
-  planet.inclination, planet.mass, planet.period, planet.stellar_mass, planet.mean_longitude = par[np.argmax(sig)]
-  print("")
-  print("BEST SOLUTION")
-  print("-------------")
-  print("Signal amp:  %.2f" % sig[np.argmax(sig)])
-  print("Inclination: %.1f" % planet.inclination)
-  print("Planet mass: %.2f" % planet.mass)
-  print("Period:      %.5f" % planet.period)
-  print("Star mass:   %.2f" % planet.stellar_mass)
-  print("Mean long.:  %.2f" % planet.mean_longitude)
-  fig2, ax = Compute(planet = planet, stack_lims = [(0.9840, 1.0160), (0.9960, 1.0090)], **kwargs)
-  fig2.suptitle('Real', fontsize = 30, y = 0.95)
-  fig2.savefig('best_run2.pdf', bbox_inches = 'tight')
+  bflx = np.zeros((nbins, len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
+  for i, _ in enumerate(inclination):
+    for p, _ in enumerate(period):
+      for m, _ in enumerate(mean_longitude):
+        for s, _ in enumerate(stellar_mass):
+          planet.inclination = inclination[i]
+          planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
+          planet.period = period[p]
+          planet.stellar_mass = stellar_mass[s]
+          planet.mean_longitude = mean_longitude[m]
+          res = Compute(planet = planet, plot = False, **kwargs)
+          bflx[:,i,p,m,s] = res['bflx']
+          
+          print(time.time() - t)
+          t = time.time()
+          
+  import pdb; pdb.set_trace()
 
 def Plot(figname = 'plot.pdf', suptitle = None, planet = ProxCenB(), **kwargs):
   '''
@@ -728,8 +709,8 @@ def Plot(figname = 'plot.pdf', suptitle = None, planet = ProxCenB(), **kwargs):
   
   # Get the data
   data = GetData()
-  fig, ax = Compute(planet = planet, data = data, 
-                            stack_lims = [(0.9840, 1.0160), (0.9960, 1.0090)], **kwargs)
+  res = Compute(planet = planet, data = data, **kwargs)
+  fig = res['fig']
   if suptitle is not None:
     fig.suptitle(suptitle, fontsize = 30, y = 0.95)
   fig.savefig(figname, bbox_inches = 'tight')
