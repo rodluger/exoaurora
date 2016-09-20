@@ -2,10 +2,12 @@
 """
 Created on Mon Sep  5 12:38:40 2016
 
-@author: dflemin3
+@author: dflemin3 [David P. Fleming, University of Washington]
 
-Utility functions, defs for contrast and blackbody-real spectral
-comparisons for Proxima Centauri system
+@email: dflemin3 (at) uw (dot) edu
+
+Utility functions, definitionss for simulating observations of auroral emission
+from the Proxima Centauri system.
 """
 
 # Imports
@@ -42,6 +44,7 @@ RP = 1.07*REARTH # Prox Cen b radius if terrestrial, Sotin et al 2007 [cm]
 AP = 0.0485*AUCM # Prox Cen b semimajor axis [cm]
 
 # Auroral Lines [Angstroms]
+NUV_LINE = 3914.0
 OGREEN_LINE = 5577.345
 OREDI_LINE = 6300.308
 OREDII_LINE = 6363.790
@@ -55,12 +58,8 @@ OREDI = 100.0*RUNIT # Note: Oxygen Red line strengths are for night airglow
 OREDII = 100.0*RUNIT
 
 # Branching ratios: fraction of total auroral power that goes into line
-EPS_EARTH_OGREEN = 1.0
-EPS_NEP_OGREEN = 1.0
-
-# Noise scaling derived from comparing integration time required for a detection
-# from an injected signal to photon-limited noise estimates
-EPS_TEL_NOISE = 1.0
+EPS_EARTH_OGREEN = 0.02
+EPS_EARTH_N = 0.02
 
 ############################################
 #
@@ -97,6 +96,11 @@ def planck(T,lam):
         effective temperature [K]
     lam : float/array
         wavelength value(s) [cm]
+
+    Returns
+    -------
+    blackbody intensity : float
+        [cgs]
     """
     # Takes cgs, outputs blackbody in cgs
     return (2.0*h*c*c/np.power(lam,5.))/(np.exp(h*c/(lam*k*T)) - 1.0)
@@ -171,7 +175,7 @@ class Star(object):
 
         # Load in Meadows et al 2016 spectrum
         if self.spectrum is None and self.wave is None:
-            spec_path = "../airglow/fits/ProxCenHubbleSpectrum.txt"
+            spec_path = "ProxCenHubbleSpectrum.txt"
             spec = np.genfromtxt(spec_path,skip_header=25)
 
             # Covert from 1 AU normalization to Prox Cen Distance
@@ -208,7 +212,7 @@ class Star(object):
         Returns
         -------
         flux : float
-            Flux at that wavelength in photons/cm^2/s
+            Flux at that wavelength in photons/cm^2/s at Earth
         """
         conv = 1.0e7 * 1.0e-4 * 1.0e-4 # converts to cgs
 
@@ -286,7 +290,6 @@ class System(object):
         aurora photon flux at Earth : float
             [photons/cm^2/s]
         """
-        #return 2.0*np.pi*aurora*self.planet.aurora_area*np.power(self.planet.Rp/self.star.d,2)/(4.0*np.pi)
         # Convert to photons/s
         return watts_to_phots(aurora,lam_0) / (4.0*np.pi*DIST**2)
 
@@ -299,12 +302,13 @@ class System(object):
 
 class Telescope(object):
     """
-    Telescope class for observing!
+    Telescope class for spectrograph observing.
     """
-    def __init__(self,D=10.0,eps=0.05,R=115000):
+    def __init__(self,D=10.0,eps=0.05,R=115000,bins=2):
         self.D = D # Telescope diameter in m
         self.eps = eps # Net telescope efficiency (throughput)
         self.R = R # Resolving Power (lambda/delta_lambda)
+        self.bins = bins # Number of spectral elements to integrate over
 
     def __repr__(self):
         word = "Telescope: Diameter (m): %.2lf. Efficiency: %.2lf." % (self.D, self.eps)
@@ -325,7 +329,7 @@ class Telescope(object):
        Returns
        -------
        IWA : float
-           Inner working angle
+           Inner working angle [in lambda/D]
         """
 
         # Separation in radians
@@ -352,7 +356,7 @@ class Telescope(object):
         flux = System.aurora_phot_flux(aurora)
         return self.eps * flux * np.pi * np.power(self.D*100./2.,2.)
 
-    def cref(self,cs, System, alpha=90.):
+    def cref(self, cs, System, alpha=90.):
         """
         Planet reflected light photon count rates.
 
@@ -383,9 +387,12 @@ class Telescope(object):
        lam_0 : float
            central wavelength [microns]
 
+        Returns
+        -------
+            stellar photon count rates
         """
-        # Compute spectral element
-        dl = lam_0/self.R
+        # Compute spectral element and integration bandwidth
+        dl = self.bins*lam_0/self.R
         flux = System.star.flux(lam_0,dl)
         return self.eps * flux * np.pi * np.power(self.D*100./2.,2.)
 
@@ -412,8 +419,8 @@ class Telescope(object):
         dt : float
             Integration time [hrs]
         """
-        # Compute spectral bin
-        dl = lam_0/self.R
+        # Compute spectral bandwidth
+        dl = self.bins*lam_0/self.R
 
         # Integration time in hours for given signal-to-noise
         cs = self.cstar(System, lam_0) # Star photon counts
@@ -461,8 +468,7 @@ class Telescope(object):
             # from telescope roll (Brown 2005)
             cn = cp + 2.0*(cz + cez + csp + cd + cr + cth)
 
-        # No corongraph, use photon-limited telescope scheme with empircal
-        # correction from HARPS 2016 data fit
+        # No corongraph, use photon-limit
         else:
             cn = cp + cs + cref
 

@@ -1,3 +1,13 @@
+"""
+
+Summer 2016
+
+@author: jlustify [Jacob Lustig-Yaeger, University of Washington]
+
+Coronagraph noise routines adapted from Robinson et al 2016
+
+"""
+
 import numpy as np
 from scipy import special
 
