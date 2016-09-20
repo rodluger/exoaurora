@@ -2,13 +2,15 @@
 """
 Created on Mon Sep  5 12:06:49 2016
 
-@author: dflemin3
+@author: dflemin3 [David P. Fleming, University of Washington]
+
+@email: dflemin3 (at) uw (dot) edu
 
 Produces figure that compares/contrasts blackbody
-flux from Prox Cen to actual (Meadows et al 2014)
+flux from Prox Cen to actual (Meadows et al 2016)
 
 Note: Flux spectrum is what an observer on Earth would see
-from the Proxima Centauri system in W/m^2/micron
+from the Proxima Centauri system in units of W/m^2/micron
 """
 
 # Imports
@@ -50,7 +52,7 @@ bb = cu.planck(proxcen.Teff,proxcen.wave*1.0e-4)*conv
 ############################################
 #
 # Make figure, overplot lines of interest
-# Note: go from microns -> Angstroms
+# Note: goes from microns -> Angstroms
 #
 ############################################
 
@@ -64,7 +66,7 @@ prox_spec = proxcen.spectrum(proxcen.wave)
 
 ax.plot(proxcen.wave[cut:]*1.0e4,prox_spec[cut:],lw=3,label="Meadows et al. 2016")
 
-# Best fit blackbody
+# Blackbody
 ax.plot(proxcen.wave[cut:]*1.0e4, bb[cut:], lw=3, color="black", label=r"T = %.0lf K Blackbody"
         % proxcen.Teff)
 
@@ -86,4 +88,4 @@ ax.set_ylabel(r"Flux [W/m$^2$/$\mu$m]")
 plt.show()
 
 # Uncomment if you want to save
-fig.savefig("../plots/prox_cen_spec.pdf")
+#fig.savefig("prox_cen_spec.pdf")

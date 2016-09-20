@@ -9,9 +9,9 @@ Created on Fri Sep  9 14:19:19 2016
 This script computes integration time required to achieve a
 given signal-to-noise in the Oxygen 5577 Angstroms auroral
 line band for various telescope configurations.  All calculations
-assume photon-limited noise, a coronagraph with noise from Robinson et al 2016
-(when used), and perfect subtraction of telluric features (excellent optical
-AO).
+assume photon-limited noise or a coronagraph with noise from Robinson et al 2016
+and perfect subtraction of telluric features (excellent optical AO) and rigorous
+data reduction (i.e. how theorists hope we'll be able to observe).
 """
 
 # Imports
@@ -27,10 +27,10 @@ import pandas as pd
 #################################################
 
 # For Oxygen green line (lambda = 5577 Angstroms)
-lam_0 = cu.OGREEN_LINE*1.0e-4 # -> microns
+lam_0 = cu.OGREEN_LINE * 1.0e-4 # -> microns
 
 # Nitrogen N_2+ UV line
-#lam_0 = cu.NUV_LINE.0e-4 # -> microns
+#lam_0 = cu.NUV_LINE * 1.0e-4 # -> microns
 
 # Default Proxima Centauri system
 proxcen = cu.System()
@@ -38,7 +38,7 @@ proxcen = cu.System()
 # HARPS telescope
 harps = cu.Telescope(D=3.6)
 
-# 8.2m SPHERE + ESPRESSO with R = 120,000 spectrograph
+# 8.2m SPHERE + ESPRESSO (Lovis et al 2016) with R = 120,000 spectrograph
 vlt = cu.Telescope(D=8.2,R=120000)
 
 # 30m TMT-like
