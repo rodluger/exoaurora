@@ -11,10 +11,6 @@
 *.synctex.gz
 */__pycache__
 exoauroraNotes.bib
-search/fits/HARPS2016/
-search/fits/UVES/
-search/fits/OTHER/
-search/fits/ProxCenHubbleSpectrum.txt
 scripts/*.pdf
 scripts/diagnostics
 scripts/*test*

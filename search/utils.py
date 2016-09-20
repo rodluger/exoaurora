@@ -193,9 +193,10 @@ def ReadFITS():
   air = []
   
   # Load in all the fits files
-  for dataset in ['HARPS2016', 'HARPS']:
+  # This is be coded up to allow importing of the UVES dataset as well
+  for dataset in ['HARPS']:
     
-    files = glob.glob(os.path.join(os.path.dirname(__file__), 'fits', dataset, 'ADP*fits'))
+    files = glob.glob(os.path.join(os.path.dirname(os.path.dirname(__file__)), dataset, '*.fits'))
     for file in files:
 
       # Read the data
@@ -232,7 +233,7 @@ def GetData():
   
   '''
   
-  filename = os.path.join(os.path.dirname(__file__), 'fits', 'data.npz')
+  filename = os.path.join(os.path.dirname(__file__), 'data.npz')
   
   if not os.path.exists(filename):
   
@@ -548,7 +549,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     
   # Generate a histogram to compute the false alarm probability
   # We'll save these to disk and add to the array each time we run the script
-  fap_file = os.path.join(os.path.dirname(__file__), 'fits', 'fap.npz')
+  fap_file = os.path.join(os.path.dirname(__file__), 'fap.npz')
   bflx_fap = np.array(bflx)
   if load_fap and os.path.exists(fap_file):
     bflx_fap = np.append(bflx_fap, np.load(fap_file)['bflx_fap'])
@@ -702,7 +703,8 @@ def Search(orb_iter = 50, inclination = np.arange(20., 90., 1.), **kwargs):
   pl.plot(inclination, sig, 'b-', alpha = 0.2)
   pl.xlabel('Inclination (degrees)')
   pl.ylabel('Max signal strength (sigma)')
-  fig.savefig('inclination.pdf')
+  fig.savefig('inclination_vs_signal.pdf')
+  np.savez(os.path.join(os.path.dirname(__file__), 'search.npz'), inclination = inclination, sig = sig)
   
   # Plot best solution
   planet.inclination, planet.mass, planet.period, planet.stellar_mass, planet.mean_longitude = par[np.argmax(sig)]
@@ -717,7 +719,7 @@ def Search(orb_iter = 50, inclination = np.arange(20., 90., 1.), **kwargs):
   print("Mean long.:  %.2f" % planet.mean_longitude)
   fig2, ax = Compute(planet = planet, stack_lims = [(0.9840, 1.0160), (0.9960, 1.0090)], **kwargs)
   fig2.suptitle('Real', fontsize = 30, y = 0.95)
-  fig2.savefig('real.pdf', bbox_inches = 'tight')
+  fig2.savefig('best_run.pdf', bbox_inches = 'tight')
 
 def Plot(figname = 'plot.pdf', suptitle = None, planet = ProxCenB(), **kwargs):
   '''

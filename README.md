@@ -13,4 +13,4 @@ I cremated Sam McGee._<br>
 
 Here you will find the Python scripts used to generate the figures in Luger et al. (2016), as well as general utilities for predicting/observing exo-aurorae.
 
-In order to reproduce Figure 2, which illustrates the search in the HARPS data, you'll need to download the HARPS fits files. These are all publicly accessible at [the ESO Archive](http://archive.eso.org/wdb/wdb/adp/phase3_main/form). Specify `Proxima Centauri` as the **Target name**, and choose `HARPS` as the **Instrument**. Request all of the science spectra, download them, and place the fits files in the directory `/search/fits/HARPS/`. Then simply run the Python script `/scripts/figure2.py`.
+In order to reproduce Figure 2, which illustrates the search in the HARPS data, you'll need to download the HARPS fits files. These are all publicly accessible at [the ESO Archive](http://archive.eso.org/wdb/wdb/adp/phase3_main/form). Specify `Proxima Centauri` as the **Target name**, and choose `HARPS` as the **Instrument**. Request all of the science spectra, download them, and place the fits files in the directory `HARPS/`. Then simply run the Python script `/scripts/figure2.py`.
