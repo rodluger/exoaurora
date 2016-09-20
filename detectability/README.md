@@ -4,7 +4,9 @@ Here you will find the Python scripts used to generate the detectability and int
 
 In order to reproduce Table 3, which illustrates the integration times required to detect auroral signals over a range of powers, run the following:
 
-```python int_time.py```
+```
+python int_time.py
+```
 
 Note: The default coronagraph design ratio is 1.0e-10, the value adopted for both the LUVOIR and the HabEX columns in Table 3.  To compute the integration times for ground-based coronagraphic telescope configurations, the coronagraph design ratio parameter can be changed in the file ```coronagraph_inputs.py```.
 
