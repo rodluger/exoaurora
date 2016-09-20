@@ -703,7 +703,7 @@ def Search(orb_iter = 50, inclination = np.arange(20., 90., 1.), **kwargs):
   pl.plot(inclination, sig, 'b-', alpha = 0.2)
   pl.xlabel('Inclination (degrees)')
   pl.ylabel('Max signal strength (sigma)')
-  fig.savefig('inclination_vs_signal.pdf')
+  fig.savefig('inclination_vs_signal2.pdf')
   np.savez(os.path.join(os.path.dirname(__file__), 'search.npz'), inclination = inclination, sig = sig)
   
   # Plot best solution
@@ -719,7 +719,7 @@ def Search(orb_iter = 50, inclination = np.arange(20., 90., 1.), **kwargs):
   print("Mean long.:  %.2f" % planet.mean_longitude)
   fig2, ax = Compute(planet = planet, stack_lims = [(0.9840, 1.0160), (0.9960, 1.0090)], **kwargs)
   fig2.suptitle('Real', fontsize = 30, y = 0.95)
-  fig2.savefig('best_run.pdf', bbox_inches = 'tight')
+  fig2.savefig('best_run2.pdf', bbox_inches = 'tight')
 
 def Plot(figname = 'plot.pdf', suptitle = None, planet = ProxCenB(), **kwargs):
   '''
