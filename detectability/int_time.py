@@ -18,6 +18,7 @@ data reduction (i.e. how theorists hope we'll be able to observe).
 from __future__ import print_function, division
 import numpy as np
 import contrast_utils as cu
+import coronagraph_inputs as ci
 import pandas as pd
 
 #################################################
@@ -59,10 +60,16 @@ SN = 6.0
 #
 #################################################
 
+# Print auroral line to observe
+print("Auroral emission line wavelength [microns]: %.6lf" % lam_0)
+
 print("VLT IWA: %.1lf" % vlt.calc_IWA(proxcen, lam_0))
 print("TMT IWA: %.1lf" % tmt.calc_IWA(proxcen, lam_0))
 print("LUVOIR IWA: %.1lf" % luvoir.calc_IWA(proxcen, lam_0))
 print("HABEX IWA: %.1lf" % habex.calc_IWA(proxcen, lam_0))
+
+# Print design contrast
+print("Coronagraph design contrast : %.1e" % ci.C)
 
 #################################################
 #

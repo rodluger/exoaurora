@@ -30,8 +30,8 @@ NEZ = 1.0
 MEZV = 22.0
 
 # Coronagraph design constrast for space-based telescopes
-#C = 1.0e-10 # Expected for future corornagrpah (TMT,LUVOIR,from Meadows et al 2016)
-C = 1.0e-5 # Conservative coronagraph design contrast for ground-based telescopes
+C = 1.0e-10 # Expected for future corornagrpah (TMT,LUVOIR,from Meadows et al 2016)
+#C = 1.0e-5 # Conservative coronagraph design contrast for ground-based telescopes
 
 # Dark count rate [/s]
 DE = 1.0e-4 # Value from Meadows et al 2016
