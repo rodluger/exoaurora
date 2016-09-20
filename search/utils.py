@@ -662,30 +662,32 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   return {'fig': fig, 'ax': ax, 'signal': bflx[len(bflx) // 2],
           'bins': bin_centers, 'bflx': bflx, 'std': std, 'snr': sig}
 
-def Search(inclination = np.arange(20., 90., 1.), 
-           period = np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.001),
-           mean_longitude = np.arange(110. - 3 * 8., 110. + 3 * 8.), 
+def Search(inclination = np.arange(30., 90., 2.), 
+           period = np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.002 / 2),
+           mean_longitude = np.arange(110. - 3 * 8., 110. + 3 * 8., 8. / 2), 
            stellar_mass = [0.120], **kwargs):
   '''
   
   '''
-  
-  import time
-  t = 0
   
   # Get the data
   data = GetData()
   planet = ProxCenB()
   kwargs.update({'data': data, 'quiet': True})
   
-  # Get the number of bins
+  # Get the bin array
   wpca_sz = kwargs.get('wpca_sz', 250)
   bin_sz = kwargs.get('bin_sz', 0.1)
-  nbins = int((wpca_sz / bin_sz - 1) - 2 * int(0.05 * (wpca_sz / bin_sz - 1)))
-
+  line = kwargs.get('line', Spectrum.OxygenGreen)
+  bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
+  pad = int(0.05 * len(bins))
+  bins = bins[pad:-pad]
+  
   # Loop over planet params
-  bflx = np.zeros((nbins, len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
+  print("Running grid search...")
+  bflx = np.zeros((len(bins), len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
   for i, _ in enumerate(inclination):
+    print("Completed about %d%%..." % (100 * i / len(inclination)))
     for p, _ in enumerate(period):
       for m, _ in enumerate(mean_longitude):
         for s, _ in enumerate(stellar_mass):
@@ -696,11 +698,20 @@ def Search(inclination = np.arange(20., 90., 1.),
           planet.mean_longitude = mean_longitude[m]
           res = Compute(planet = planet, plot = False, **kwargs)
           bflx[:,i,p,m,s] = res['bflx']
-          
-          print(time.time() - t)
-          t = time.time()
-          
-  import pdb; pdb.set_trace()
+  print("Saving...")
+  np.savez(os.path.join(os.path.dirname(__file__), 'search.npz'), 
+           bins = bins, bflx = bflx, inclination = inclination, period = period,
+           mean_longitude = mean_longitude, stellar_mass = stellar_mass)
+  
+  # DEBUG
+  quit()
+  # XXXXX
+  
+  bmax = np.max(bflx, axis = (1,2,3,4))
+  bmax -= np.nanmean(bmax)
+  bmax /= np.nanstd(bmax)
+  pl.plot(bins, bmax)
+  pl.show()
 
 def Plot(figname = 'plot.pdf', suptitle = None, planet = ProxCenB(), **kwargs):
   '''
