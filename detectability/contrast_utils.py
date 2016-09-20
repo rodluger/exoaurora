@@ -175,7 +175,7 @@ class Star(object):
 
         # Load in Meadows et al 2016 spectrum
         if self.spectrum is None and self.wave is None:
-            spec_path = "../airglow/fits/ProxCenHubbleSpectrum.txt"
+            spec_path = "ProxCenHubbleSpectrum.txt"
             spec = np.genfromtxt(spec_path,skip_header=25)
 
             # Covert from 1 AU normalization to Prox Cen Distance
