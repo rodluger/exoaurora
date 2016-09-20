@@ -10,11 +10,15 @@ Note: The default coronagraph design ratio is 1.0e-10, the value adopted for bot
 
 Aditional calculations are the TRAPPIST-1 and Proxima Centauri visible contrast ratio comparisons and the blackbody and Meadows et al. 2016 spectrum comparison.  These calculations can be reproduced by running
 
-```python trappist_est.py```
+```
+python trappist_est.py
+```
 
 and
 
-```blackbody_real.py```,
+```
+blackbody_real.py
+```
 
 respectively.
 
