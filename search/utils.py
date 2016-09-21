@@ -665,52 +665,141 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
 def Search(inclination = np.arange(30., 90., 2.), 
            period = np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.002 / 2),
            mean_longitude = np.arange(110. - 3 * 8., 110. + 3 * 8., 8. / 2), 
-           stellar_mass = [0.120], **kwargs):
+           stellar_mass = [0.120], clobber = False, 
+           period_ticks = [11.182, 11.184, 11.186, 11.188, 11.190],
+           mean_longitude_ticks = [90., 100., 110., 120., 130.],
+           inclination_ticks = [35, 45, 55, 65, 75, 85],
+           **kwargs):
   '''
   
   '''
   
-  # Get the data
-  data = GetData()
-  planet = ProxCenB()
-  kwargs.update({'data': data, 'quiet': True})
+  search_file = os.path.join(os.path.dirname(__file__), 'search.npz')
+  if clobber or not os.path.exists(search_file):
+    
+    # Get the data
+    data = GetData()
+    planet = ProxCenB()
+    kwargs.update({'data': data, 'quiet': True})
   
-  # Get the bin array
-  wpca_sz = kwargs.get('wpca_sz', 250)
-  bin_sz = kwargs.get('bin_sz', 0.1)
-  line = kwargs.get('line', Spectrum.OxygenGreen)
-  bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
-  pad = int(0.05 * len(bins))
-  bins = bins[pad:-pad]
+    # Get the bin array
+    wpca_sz = kwargs.get('wpca_sz', 250)
+    bin_sz = kwargs.get('bin_sz', 0.1)
+    line = kwargs.get('line', Spectrum.OxygenGreen)
+    bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
+    pad = int(0.05 * len(bins))
+    bins = bins[pad:-pad]
   
-  # Loop over planet params
-  print("Running grid search...")
-  bflx = np.zeros((len(bins), len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
-  for i, _ in enumerate(inclination):
-    print("Completed about %d%%..." % (100 * i / len(inclination)))
-    for p, _ in enumerate(period):
-      for m, _ in enumerate(mean_longitude):
-        for s, _ in enumerate(stellar_mass):
-          planet.inclination = inclination[i]
-          planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
-          planet.period = period[p]
-          planet.stellar_mass = stellar_mass[s]
-          planet.mean_longitude = mean_longitude[m]
-          res = Compute(planet = planet, plot = False, **kwargs)
-          bflx[:,i,p,m,s] = res['bflx']
-  print("Saving...")
-  np.savez(os.path.join(os.path.dirname(__file__), 'search.npz'), 
-           bins = bins, bflx = bflx, inclination = inclination, period = period,
-           mean_longitude = mean_longitude, stellar_mass = stellar_mass)
+    # Loop over planet params
+    print("Running grid search...")
+    bflx = np.zeros((len(bins), len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
+    for i, _ in enumerate(inclination):
+      print("Completed about %d%%..." % (100 * i / len(inclination)))
+      for p, _ in enumerate(period):
+        for m, _ in enumerate(mean_longitude):
+          for s, _ in enumerate(stellar_mass):
+            planet.inclination = inclination[i]
+            planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
+            planet.period = period[p]
+            planet.stellar_mass = stellar_mass[s]
+            planet.mean_longitude = mean_longitude[m]
+            res = Compute(planet = planet, plot = False, **kwargs)
+            bflx[:,i,p,m,s] = res['bflx']            
+    print("Saving...")
+    np.savez(search_file, bins = bins, bflx = bflx, inclination = inclination, period = period,
+             mean_longitude = mean_longitude, stellar_mass = stellar_mass)
+  else:
+    print("Loading saved search...")
+    data = np.load(search_file)
+    bins = data['bins']
+    bflx = data['bflx']
+    inclination = data['inclination']
+    period = data['period']
+    mean_longitude = data['mean_longitude']
+    stellar_mass = data['stellar_mass']
   
-  # DEBUG
-  quit()
-  # XXXXX
+  # Triangle plot
+  fig, ax = pl.subplots(3,3)
+  fig.subplots_adjust(wspace = 0.08, hspace = 0.1, top = 0.975, bottom = 0.15)
   
+  # The binned flux at the line as a function of all the grid params
+  bline = bflx[len(bflx) // 2]
+  
+  # The marginalized distributions
+  ax[0,0].plot(inclination, np.max(bline, axis = (1,2,3)), color = 'k')
+  ax[1,1].plot(period, np.max(bline, axis = (0,2,3)), color = 'k')
+  ax[2,2].plot(mean_longitude, np.max(bline, axis = (0,1,3)), color = 'k')
+  
+  # The two-parameter heatmaps
+  ax[1,0].imshow(np.max(bline, axis = (2,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(period), np.max(period)), cmap = pl.get_cmap('Greys'))
+  ax[2,0].imshow(np.max(bline, axis = (1,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'))
+  ax[2,1].imshow(np.max(bline, axis = (0,3)).T, aspect = 'auto', extent = (np.min(period), np.max(period), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'))
+  
+  # Tweak the appearance
+  for axis in ax.flatten():
+    axis.margins(0,0)
+    axis.ticklabel_format(useOffset = False)
+    for tick in axis.get_xticklabels() + axis.get_yticklabels():
+      tick.set_rotation(45)
+  for axis in [ax[0,1], ax[0,2], ax[1,2]]:
+    axis.set_visible(False)
+  for axis in [ax[0,0], ax[1,0], ax[1,1]]:
+    axis.xaxis.set_ticklabels([])
+  ylims = np.array([axis.get_ylim() for axis in [ax[0,0], ax[1,1], ax[2,2]]])
+  ymin = np.min(ylims)
+  ymax = np.max(ylims) 
+  yrng = ymax - ymin
+  ymin -= 0.1 * yrng
+  ymax += 0.1 * yrng
+  ax[2,1].yaxis.set_ticklabels([])
+  for axis in [ax[0,0], ax[1,1], ax[2,2]]:
+    axis.yaxis.tick_right()
+    axis.set_ylim(ymin, ymax)
+    axis.margins(0, None)
+  ax[0,0].set_xticks(inclination_ticks)
+  ax[1,1].set_xticks(period_ticks)
+  ax[2,2].set_xticks(mean_longitude_ticks)
+  ax[1,0].set_xticks(inclination_ticks)
+  ax[1,0].set_yticks(period_ticks)
+  ax[2,0].set_xticks(inclination_ticks)
+  ax[2,0].set_yticks(mean_longitude_ticks)
+  ax[2,1].set_xticks(period_ticks)
+  ax[2,1].set_yticks(mean_longitude_ticks)
+  
+  ax[1,0].set_ylabel('Period (days)', labelpad = 10, fontsize = 16)
+  ax[2,0].set_ylabel('Mean longitude ($^\circ$)', labelpad = 18, fontsize = 16)
+  ax[2,0].set_xlabel('Inclination ($^\circ$)', labelpad = 21, fontsize = 16)
+  ax[2,1].set_xlabel('Period (days)', labelpad = 8, fontsize = 16)
+  ax[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 16)
+  
+  # The distribution of signal maxima at each wavelength (this gives us the FAP)
+  fig2, ax2 = pl.subplots(1)
   bmax = np.max(bflx, axis = (1,2,3,4))
   bmax -= np.nanmean(bmax)
   bmax /= np.nanstd(bmax)
-  pl.plot(bins, bmax)
+  
+  # Compute the FAP
+  blinemax = bmax[len(bmax) // 2]
+  nb = len(np.where(bmax >= blinemax)[0])
+  fap = nb / len(bmax)
+  fap_mult, fap_exp = [int(n) for n in ("%.0e" % fap).split("e")]
+  if nb == 1:
+    fap_sgn = "<"
+  else:
+    fap_sgn = r"\approx"
+  fap_str = r'$\mathrm{FAP} %s %d \times 10^{%d}$' % (fap_sgn, fap_mult, fap_exp)
+  
+  n, bins, _ = ax2.hist(bmax, bins = 30, color = 'w')
+  d = np.digitize(blinemax, bins)
+  if d == len(bins): 
+    d -= 1
+  ax2.axvline(bins[d] - 0.5 * (bins[1] - bins[0]), color = 'r', ls = '--')
+  ax2.margins(0.1, None)
+  ax2.set_ylabel(r'Number of signals', fontsize = 18)
+  ax2.set_xlabel(r'Significance ($\sigma$)', fontsize = 18)
+  ax2.annotate(fap_str, xy = (0.975, 0.95), 
+               xycoords = 'axes fraction', ha = 'right', 
+               va= 'top', fontsize = 18)
   pl.show()
 
 def Plot(figname = 'plot.pdf', suptitle = None, planet = ProxCenB(), **kwargs):
