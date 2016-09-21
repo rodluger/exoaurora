@@ -555,7 +555,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     ax[3].set_ylim(0.8, 1e3)
     ax[3].margins(0.1, None)
     ax[3].set_ylabel(r'$\log\ N$', fontsize = 14)
-    ax[3].set_xlabel(r'$\Delta f\ (\sigma$)', fontsize = 14)
+    ax[3].set_xlabel(r'SNR', fontsize = 14)
     rect = Rectangle((0.125 + 0.01, 0.36 - 0.055 + 0.01), 0.28, 0.235, facecolor='w', edgecolor='k',
                       transform=fig.transFigure, alpha = 0.85, zorder=1)
     fig.patches.append(rect)
@@ -691,7 +691,7 @@ def Search(inclination = np.arange(30., 90., 2.),
   planet.period = period[p]
   planet.stellar_mass = stellar_mass[s]
   planet.mean_longitude = mean_longitude[m]
-  
+
   # --- FIGURE 1: Injection test (~8 sigma). This is our nominal detection threshold.
   # Note that we inject 10 angstroms redward of the line we're interested in, so we
   # don't stack an injected signal on top of an actual signal. Note also that we 
@@ -715,9 +715,9 @@ def Search(inclination = np.arange(30., 90., 2.),
   ax2[1,1].plot(period, np.max(bline, axis = (0,2,3)), color = 'k')
   ax2[2,2].plot(mean_longitude, np.max(bline, axis = (0,1,3)), color = 'k')
   # The two-parameter heatmaps
-  ax2[1,0].imshow(np.max(bline, axis = (2,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(period), np.max(period)), cmap = pl.get_cmap('Greys'))
-  ax2[2,0].imshow(np.max(bline, axis = (1,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'))
-  ax2[2,1].imshow(np.max(bline, axis = (0,3)).T, aspect = 'auto', extent = (np.min(period), np.max(period), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'))
+  ax2[1,0].imshow(np.max(bline, axis = (2,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(period), np.max(period)), cmap = pl.get_cmap('Greys'), origin = 'lower')
+  ax2[2,0].imshow(np.max(bline, axis = (1,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'), origin = 'lower')
+  ax2[2,1].imshow(np.max(bline, axis = (0,3)).T, aspect = 'auto', extent = (np.min(period), np.max(period), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'), origin = 'lower')
   # Tweak the appearance
   for axis in ax2.flatten():
     axis.margins(0,0)
@@ -750,9 +750,9 @@ def Search(inclination = np.arange(30., 90., 2.),
   ax2[2,1].set_yticks(mean_longitude_ticks)
   ax2[1,0].set_ylabel('Period (days)', labelpad = 10, fontsize = 16)
   ax2[2,0].set_ylabel('Mean longitude ($^\circ$)', labelpad = 18, fontsize = 16)
-  ax2[2,0].set_xlabel('Inclination ($^\circ$)', labelpad = 21, fontsize = 16)
-  ax2[2,1].set_xlabel('Period (days)', labelpad = 8, fontsize = 16)
-  ax2[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 16)
+  ax2[2,0].set_xlabel('Inclination ($^\circ$)', labelpad = 21, fontsize = 18)
+  ax2[2,1].set_xlabel('Period (days)', labelpad = 8, fontsize = 18)
+  ax2[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 18)
   fig2.savefig('triangle.pdf', bbox_inches = 'tight')
   
   # --- FIGURE 3: The distribution of signal maxima at each wavelength (this gives us the FAP)
@@ -777,21 +777,25 @@ def Search(inclination = np.arange(30., 90., 2.),
   ax3.set_xlabel(r'Significance ($\sigma$)', fontsize = 22)
   ax3.annotate(fap_str, xy = (0.975, 0.95), 
                xycoords = 'axes fraction', ha = 'right', 
-               va= 'top', fontsize = 18)
-  [tick.label.set_fontsize(14) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
+               va= 'top', fontsize = 20)
+  [tick.label.set_fontsize(16) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
   fig3.savefig('fap.pdf', bbox_inches = 'tight')
   
   #--- FIGURE 4: Actually plot bmax versus wavelength
   print("Plotting figure 4...")
   fig4, ax4 = pl.subplots(1, figsize = (12,4))
-  ax4.plot(bins, bmax, 'k-', lw = 0.5)
-  ax4.axvline(line, color = 'r', alpha = 0.5, ls = '--')
-  ax4.axhline(blinemax, color = 'r', alpha = 0.5, ls = '--')
+  ax4.plot(bins, bmax, 'k-', lw = 0.5, zorder = -2)
+  ax4.annotate('', xy=(line, blinemax), xycoords='data',
+              xytext=(0, 95), textcoords='offset points',
+              arrowprops=dict(arrowstyle="simple",
+                              fc='r', ec="none"))
   ax4.margins(0, None)
-  ax4.set_xlabel('Wavelength ($\AA$)', fontsize = 18)
-  ax4.set_ylabel('Significance ($\sigma$)', fontsize = 18)
-  [tick.label.set_fontsize(14) for tick in ax4.xaxis.get_major_ticks() + ax4.yaxis.get_major_ticks()]
-  fig4.savefig('max_signal_vs_wavelength.pdf', bbox_inches = 'tight')
+  ax4.axhspan(ax4.get_ylim()[0], blinemax - 0.01, color = 'w', alpha = 0.85)
+  ax4.axhline(blinemax - 0.01, color = 'k', lw = 1, zorder = 100)
+  ax4.set_xlabel('Wavelength ($\AA$)', fontsize = 28)
+  ax4.set_ylabel('Significance ($\sigma$)', fontsize = 28)
+  [tick.label.set_fontsize(22) for tick in ax4.xaxis.get_major_ticks() + ax4.yaxis.get_major_ticks()]
+  fig4.savefig('max_signal_vs_wavelength.pdf', bbox_inches = 'tight') 
 
   #--- FIGURE 5: Plot the "river plot" for the best solution
   print("Plotting figure 5...")
