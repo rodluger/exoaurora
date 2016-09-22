@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-utils.py
---------
+search.py
+---------
+
+Searching the HARPS data for the OI emission signal.
 
 '''
 
@@ -10,7 +12,7 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 import matplotlib as mpl
 mpl.rcParams['font.family'] = ['serif']
 mpl.rcParams['font.serif'] = ['Times New Roman']
-from .kepler import RadialVelocity
+from kepler import RadialVelocity
 import numpy as np
 from sklearn.decomposition import PCA
 from wpca import WPCA
@@ -714,6 +716,11 @@ def Search(inclination = np.arange(30., 90., 2.),
   ax2[0,0].plot(inclination, np.max(bline, axis = (1,2,3)), color = 'k')
   ax2[1,1].plot(period, np.max(bline, axis = (0,2,3)), color = 'k')
   ax2[2,2].plot(mean_longitude, np.max(bline, axis = (0,1,3)), color = 'k')
+  # Indicate the 1-sigma bounds
+  ax2[1,1].axvline(11.186, color = 'k', ls = '--')
+  ax2[1,1].axvspan(11.186 - 0.002, 11.186 + 0.002, color = 'k', alpha = 0.075)
+  ax2[2,2].axvline(110., color = 'k', ls = '--')
+  ax2[2,2].axvspan(110. - 8., 110. + 8., color = 'k', alpha = 0.075)
   # The two-parameter heatmaps
   ax2[1,0].imshow(np.max(bline, axis = (2,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(period), np.max(period)), cmap = pl.get_cmap('Greys'), origin = 'lower')
   ax2[2,0].imshow(np.max(bline, axis = (1,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'), origin = 'lower')
@@ -803,3 +810,7 @@ def Search(inclination = np.arange(30., 90., 2.),
   fig5 = res['fig']
   fig5.suptitle('Strongest Signal', fontsize = 30, y = 0.95)
   fig5.savefig('strongest_river.pdf', bbox_inches = 'tight')
+
+# Reproduce Figures 2-6 in the paper
+if __name__ == '__main__':
+  Search()
