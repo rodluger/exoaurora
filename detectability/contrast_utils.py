@@ -180,7 +180,7 @@ class Star(object):
 
             # Covert from 1 AU normalization to Prox Cen Distance
             # so flux is flux received at Earth
-            spec[:,1] *= (AUCM/DIST)**2
+            spec[:,1] *= (AUCM/self.d)**2
 
             # Linearly interpolate spectrum so it's callable
             # as a function of microns
