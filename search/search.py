@@ -198,7 +198,7 @@ def ReadFITS():
   # This is be coded up to allow importing of the UVES dataset as well
   for dataset in ['HARPS']:
     
-    files = glob.glob(os.path.join(os.path.dirname(os.path.dirname(__file__)), dataset, '*.fits'))
+    files = glob.glob(os.path.join(os.path.dirname(__file__), dataset, '*.fits'))
     for file in files:
 
       # Read the data

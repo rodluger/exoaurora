@@ -19,7 +19,7 @@ import numpy as np
 import os
 
 # Get the names of all the fits files
-files = glob.glob(os.path.join('..', 'HARPS', '*.fits'))
+files = glob.glob(os.path.join('HARPS', '*.fits'))
 
 # Get the fits headers
 headers = [pyfits.getheader(f) for f in files]
@@ -36,7 +36,7 @@ origfile = [h['ORIGFILE'] for h in headers]
 seconds = np.sum([float(e) for e in exptime])
 
 # Print the manifest to file
-with open('../MANIFEST.txt', 'w') as file:
+with open('MANIFEST.txt', 'w') as file:
   print("EXOAURORA PROXIMA CENTAURI B 5577A OI LINE SEARCH", file = file)
   print("=================================================", file = file)
   print("", file = file)
