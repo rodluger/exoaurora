@@ -168,7 +168,7 @@ class ProxCenB(Planet):
       self.inclination = self._inclination()
     self.mass = self._mass()
  
-def GaussianLine(x, line = Spectrum.OxygenGreen, fwhm = 0.1, A = 1.):
+def GaussianLine(x, line = Spectrum.OxygenGreen, fwhm = 0.05, A = 1.):
   '''
   
   '''
@@ -298,7 +298,7 @@ def RemoveStellarLines(wav, flx, weights = None, npc = 5, inds = None):
 
 def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot = True, 
             plot_sz = 10, npc = 10, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
-            bin_sz = 0.1, mask_star = True, med_mask_sz = 5,
+            bin_sz = 0.05, mask_star = True, med_mask_sz = 5,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
             crop_outliers = True, clobber = False, quiet = False, spectrum_filter = 'True', 
             max_frac_noise = 3, wpca_weights = 'exptime', filter_sz = 1.):
