@@ -31,7 +31,7 @@ PCCM = 3.086e18 # cm per parsec
 
 # Physical constastns [cgs]
 h = 6.6260755e-27 # Planck constant
-c = 3.0e10 # Speed of light [cm/s]
+c = 2.99792458e10 # Speed of light [cm/s]
 k = 1.380658e-16 # Boltzman const
 
 # Prox consts
@@ -66,6 +66,35 @@ EPS_EARTH_N = 0.02
 # Function definitions
 #
 ############################################
+
+def gaussian(x, mu, FWHM):
+    """
+    Return a gaussian given a mean, FWHM and some x array.
+
+    Parameters
+    ----------
+    x : array
+        Array to compute gaussian on
+    mu : float
+        mean
+    FWHM : float
+        full width at half max
+
+    Note: x, mu and FWHM must have the same units
+
+    Returns
+    -------
+    gaussian : like x
+    """
+
+    # Ensure mean within range
+    assert mu >= x.min() and mu <= x.max()
+
+    sig = FWHM / (2.0 * np.sqrt(2. * np.log(2)))
+
+    return (1.0/(np.sqrt(2.0*np.pi) * sig)) * np.exp(-np.power((x-mu)/sig,2)/2.0)
+# end function
+
 
 def lambertPhaseFunction(alpha):
     """
@@ -126,6 +155,104 @@ def watts_to_phots(watts,lam):
     """
 
     return watts*1.0e7*(lam*1.0e-4)/(h*c)
+# end function
+
+
+def make_wave_array(lam_0, dl, FWHM):
+    """
+    Given a central wavelength, a bin size (delta lambda), and a
+    bin number, compute a high resolution wavelength array
+
+    Parameters
+    ----------
+    lam_0 : float
+        central wavelength [microns]
+    dl : float
+        bin size [microns]
+    FWHM : float
+        full-width at half max of line [microns]
+
+    Returns
+    -------
+    wave_hires : array
+        wavelength array [microns]
+    """
+
+    array_max = lam_0 + dl/2.
+    array_min = lam_0 - dl/2.
+
+    return np.linspace(array_min, array_max, int(10*dl/FWHM))
+#end function
+
+
+def create_auroral_line(lam_0, watts, FWHM, system, wave_hires):
+    """
+    docs
+
+    Parameters
+    ----------
+    lam_0 : float
+        Central wavelength of aurora [microns]
+    watts : float (or array)
+        auroral power [W]
+    FWHM : float
+        full width at half max [km/s]
+    system : object
+        system object (see below!)
+    wave_hires : array
+        wavelength array [microns]
+
+    Returns
+    -------
+    line profile : array
+        Array of fluxes as observed at Earth of auroral gaussian auroral
+        emission line
+   wave_grid : array
+       Wavelength array over which line profile is computed [microns]
+    """
+
+    # Scale FWHM to microns
+    fwhm_scaled = 1000*100*FWHM # cm/s
+    fwhm_scaled = np.sqrt((1 + fwhm_scaled / c) / (1 - fwhm_scaled / c)) - 1
+    fwhm_scaled *= lam_0 # microns
+
+    # Convert to flux at Earth in W/cm^2
+    auroral_flux = watts / (4.0 * np.pi * system.star.d ** 2)
+
+    # Convert to W/m^2
+    auroral_flux *= (100**2)
+
+    # Make an unscaled auroral Gaussian line profile
+    aurora_unscaled = gaussian(wave_hires,lam_0,fwhm_scaled)
+
+    # Now scale it so that integral gives you power at Earth
+    return (aurora_unscaled * auroral_flux)
+# end function
+
+def equivalent_width(planet_flux, wave, continuum):
+    """
+    Compute the equivalent width of a line.  Note: In general, equivalent
+    widths are negative for emission features and positive for absorption
+    features, but here we take the absolute value because I don't like
+    negatives.
+
+    Parameters
+    ----------
+    planet_flux : array
+        array of fluxes containing line of interest
+    wave : array
+        grid of wavelength over width line lives
+    continuum : array
+        contiuum in neighborhood of line
+
+    Returns
+    -------
+    eq_w : float
+        equivalent width of the line [units of wave]
+    """
+
+    return np.fabs(np.trapz(1.0 - (planet_flux/continuum),wave))
+# end function
 
 
 ############################################
