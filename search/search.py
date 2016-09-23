@@ -6,6 +6,10 @@ search.py
 
 Searching the HARPS data for the OI emission signal.
 
+TODO
+----
+- Might need to compute signal relative to immediate vicinity?
+
 '''
 
 from __future__ import division, print_function, absolute_import, unicode_literals
@@ -57,7 +61,7 @@ class Spectrum(object):
   HeliumYellow = 5875.6 # Activity tracer?
   MysteryLineII = 5540.07 # Prominent in both star and earth... Weird!
   
-  EarthLines = [MysteryLineII, OxygenGreen, OxygenRedI, OxygenRedII]
+  EarthLines = [MysteryLineII, NitrogenUVI, OxygenGreen, OxygenRedI, OxygenRedII]
   StarLines = [MysteryLineII, OxygenGreen, MysteryLineI, SodiumDI, SodiumDII, HeliumYellow]
 
 class Planet(object):
@@ -249,8 +253,11 @@ def GetData():
     
     # Apply the system offset. This was determined empirically by matching the
     # stellar Na D I and II lines. This calibration is accurate to ~ 0.01 A.
+    # Note that HARPS spectra are actually all in the same reference frame
+    # (heliocentric? I'm not sure), so this offset puts us in the frame of 
+    # Proxima Centauri for all spectra.
     wav /= SYSTEM_OFFSET
-        
+    
     # Save    
     print("Saving dataset...")
     result = {'wav': wav, 'jd': jd, 'flx': flx, 'err': err, 'dataset': dataset,
@@ -293,8 +300,8 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
             plot_sz = 10, npc = 10, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
             bin_sz = 0.1, mask_star = True, med_mask_sz = 5,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
-            high_pass_filter = True, crop_outliers = True, stack_lims = [(0.9840, 1.0160), (0.9960, 1.0100)], 
-            clobber = False, quiet = False, filter = 'True'):
+            crop_outliers = True, clobber = False, quiet = False, spectrum_filter = 'True', 
+            max_frac_noise = 3, wpca_weights = 'exptime', filter_sz = 1.):
   '''
   
   '''
@@ -314,6 +321,18 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   exp = data['exptime']
   dataset = data['dataset']
   total_exp = 0
+  
+  # Some wavelength-specific params. The noise changes a lot from the UV to the vis,
+  # so we need to change our plotting scale.
+  if line < 4000:
+    spec_amp = 0.001
+    stack_lims = [(0.6, 1.4), (0.8, 1.2)]
+  elif line < 4500:
+    spec_amp = 0.0025
+    stack_lims = [(0.9, 1.1), (0.95, 1.05)]
+  else:
+    spec_amp = 0.01
+    stack_lims = [(0.9840, 1.0160), (0.9960, 1.0100)]
   
   # Crop to a smaller window centered on the line
   inds = np.where((wav >= line - wpca_sz / 2.) & (wav <= line + wpca_sz / 2.))[0]
@@ -341,8 +360,13 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   for i in range(len(flx)):
   
     # Set weights according to exposure time
-    weights[:,i] = np.sqrt(exp[i])
-  
+    if wpca_weights == 'exptime':
+      weights[:,i] = np.sqrt(exp[i])
+    elif wpca_weights == 'std':
+      weights[:,i] = 1. / np.nanstd(flx[i] / np.nanmedian(flx[i]))
+    else:
+      raise ValueError('Parameter `wpca_weights` must be one of `exptime` or `std`.')
+      
     # Add mask for each of the star's lines
     for star_line in Spectrum.StarLines:
       m = list(np.where((wav > star_line - wpca_mask_sz / 2.) & (wav < star_line + wpca_mask_sz / 2.))[0])
@@ -395,7 +419,13 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   # Compute the planet doppler factor now, since we use it a couple times below
   pdf = [planet.doppler_factor(j) for j in jd]
   
-  # Crop outliers in planet frame?
+  # Crop outliers in planet frame? This is useful only for the FAP calculation,
+  # since we don't want an outlier in a single spectrum affecting our FAP. Note
+  # that this is somewhat asymmetrical, since we're not removing outliers in the
+  # 5577A window: we could then detect a "signal" due to a single outlier in one
+  # spectrum. But we must allow for time-variable emission; plus, if we do find
+  # such a signal because of an outlier, it would be easy to tell which spectrum 
+  # it came from, and we can deal with it then.
   if crop_outliers:
 
     # Shift to planet frame. If the planet is moving away from us (redshifted),
@@ -404,9 +434,12 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     x = [ApplyDopplerFactor(wav, -p) for p in pdf]
     flxp = np.array([np.interp(wav, xi, flxi) for xi, flxi in zip(x, flx)])
   
-    # Remove 10-sigma outliers in each wavelength bin
+    # Remove 10-sigma outliers in each wavelength bin, except where we're looking
+    # for our signal (which could be highly variable).
     med = np.nanmedian(flxp, axis = 1)
     for j, _ in enumerate(wav):
+      if (wav[j] > line - wpca_mask_sz / 2.) and (wav[j] < line + wpca_mask_sz / 2.):
+        continue
       y = flxp[:,j] / med
       m = np.nanmedian(y)
       MAD = 1.4826 * np.nanmedian(np.abs(y - m))
@@ -439,7 +472,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   for i in range(len(flx)):
     
     # User-defined filter
-    if not eval(filter):
+    if not eval(spectrum_filter):
       continue
     
     # Compute the planet mask in the stellar frame. If the planet is moving away
@@ -452,9 +485,13 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
       
       # The de-trended spectra
       x = np.array(wav)
-      y = planet.phase(jd[i]) + 0.01 * flx[i] / np.nanmedian(flx[i])
+      y = planet.phase(jd[i]) + spec_amp * flx[i] / np.nanmedian(flx[i])
       y0 = np.array(flx[i])
       
+      # Is the spectrum too noisy?
+      if np.std(y0 / np.nanmedian(y0)) > max_frac_noise:
+        continue
+           
       # DOPPLER SHIFTING SANITY CHECK:
       #
       #   if (planet.phase(jd[i]) < 0.22) and (planet.phase(jd[i]) > 0.18):
@@ -477,9 +514,9 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
         if len(s):
           y0[s] = np.nanmedian(y0[np.where(np.abs(x - wav[s][0]) < med_mask_sz)])
       
-      # High pass filter? 5 angstroms wide, 2nd order SavGol
-      if high_pass_filter:
-        window = int(5. / np.nanmedian(x[1:] - x[:-1]))
+      # High pass filter? `filter_sz` angstrom(s) wide, 2nd order SavGol
+      if filter_sz:
+        window = int(filter_sz / np.nanmedian(x[1:] - x[:-1]))
         if not (window % 2):
           window += 1
         filt = savgol_filter(y0, window, 2)
