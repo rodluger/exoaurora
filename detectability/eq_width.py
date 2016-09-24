@@ -214,10 +214,15 @@ if show_contour:
 
     # Contour Lines
     contour_levels = np.array([1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
+    # Automate "manual locations" for contour labels
+    ia = (np.abs(watts-6.5e14)).argmin() # A. Power index
+    ic = [np.abs(contrast[ia, :] - clvl).argmin() for clvl in contour_levels]
+    manual_locations = [(watts[ia], ic[i]) for i in range(len(contour_levels))]
+    # Log levels
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, contrast.T, contour_levels,
                      colors=["black","black", "black", "black", "black"])
-    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt)
+    #plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, manual=manual_locations)
     # Thicken the contour lines
     zc = cln.collections; plt.setp(zc, linewidth=2)
 
@@ -227,10 +232,12 @@ if show_contour:
 
     # Plot equivalent resolving power (equivalent width converted to resolving
     # power at 5577 angstroms)
-    ax.plot(watts,ew_r, color="white", lw=3, ls="--")
+    ax.plot(watts,ew_r, color="white", lw=3, ls="--",
+            label=r"Equiv. Resolving Power ($\lambda / W_{\lambda}$)")
 
     # Plot limiting resolving power
-    ax.axhline(R_limit,color="orange",ls="--",lw=3)
+    ax.axhline(R_limit,color="orange", ls="--", lw=3,
+               label=r"Limiting Resolving Power")
 
     # Format
     ax.set_ylim(resolver.min(),resolver.max())
@@ -240,6 +247,10 @@ if show_contour:
     # Axis lables
     ax.set_xlabel(r"OI Auroral Power [W]")
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
+
+    # legend
+    leg=ax.legend(loc=0, fontsize=14)
+    leg.get_frame().set_alpha(0.7)
 
     plt.show()
 
