@@ -545,7 +545,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   
   # High pass median filter? `filter_sz` angstrom(s) wide
   if filter_sz:
-    window = int(filter_sz / np.nanmedian(x[1:] - x[:-1]))
+    window = int(filter_sz / np.nanmedian(xstack[1:] - xstack[:-1]))
     if not (window % 2):
       window += 1
     filt = medfilt(fstack, window)
