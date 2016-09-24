@@ -215,18 +215,22 @@ if show_contour:
     # Contour Lines
     contour_levels = np.array([1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
     fmt = ticker.LogFormatterMathtext()
-    cln = ax.contour(watts, resolver, contrast.T, contour_levels, colors="white",
-                     lw=3.0)
+    cln = ax.contour(watts, resolver, contrast.T, contour_levels,
+                     colors=["black","black", "black", "black", "black"])
     plt.clabel(cln, inline=1, fontsize=15, fmt=fmt)
+    # Thicken the contour lines
+    zc = cln.collections; plt.setp(zc, linewidth=2)
 
     # Colorbar
     cbar = fig.colorbar(cax)
     cbar.set_label(r"Planet-Star Contrast", rotation=270, labelpad=25)
 
+    # Plot equivalent resolving power (equivalent width converted to resolving
+    # power at 5577 angstroms)
     ax.plot(watts,ew_r, color="white", lw=3, ls="--")
 
     # Plot limiting resolving power
-    ax.axhline(R_limit,color="red",ls="--",lw=3)
+    ax.axhline(R_limit,color="orange",ls="--",lw=3)
 
     # Format
     ax.set_ylim(resolver.min(),resolver.max())
@@ -235,7 +239,7 @@ if show_contour:
 
     # Axis lables
     ax.set_xlabel(r"OI Auroral Power [W]")
-    ax.set_ylabel(r"Resolving Power")
+    ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
     plt.show()
 
