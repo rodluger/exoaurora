@@ -298,7 +298,7 @@ def RemoveStellarLines(wav, flx, weights = None, npc = 5, inds = None):
 
 def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot = True, 
             plot_sz = 10, npc = 10, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
-            bin_sz = 0.05, mask_star = True, med_mask_sz = 5,
+            bin_sz = 0.05, mask_star = True, med_mask_sz = 5, fwhm = 0.05,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
             crop_outliers = True, clobber = False, quiet = False, spectrum_filter = 'True', 
             max_frac_noise = 3, wpca_weights = 'exptime', filter_sz = 1.):
@@ -345,12 +345,12 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     for i in range(len(flx)):
       # Get planet line wavelength in the stellar frame
       x = ApplyDopplerFactor(line, inject_planet.doppler_factor(jd[i]))
-      # Get indices corresponding to the FWHM of the line
-      inds = np.where(np.abs(wav - x) < 0.1)[0]
+      # Get indices corresponding to the FWHM of the line (TODO: Check this)
+      inds = np.where(np.abs(wav - x) <= fwhm / 2.)[0]
       # Compute the flux in the stellar spectrum at those indices
       z = np.trapz(flx[i][inds], wav[inds])
       # Compute the line profile. The amplitude is contrast * z
-      flx[i] += GaussianLine(wav, line = x, A = inject_contrast * z)
+      flx[i] += GaussianLine(wav, line = x, fwhm = fwhm, A = inject_contrast * z)
 
   # Get masks in the stellar frame
   if not quiet: print("Applying masks...")
@@ -674,7 +674,7 @@ def Search(inclination = np.arange(30., 90., 2.),
   
     # Get the bin array
     wpca_sz = kwargs.get('wpca_sz', 250)
-    bin_sz = kwargs.get('bin_sz', 0.1)
+    bin_sz = kwargs.get('bin_sz', 0.05)
     bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
     pad = int(0.05 * len(bins))
     bins = bins[pad:-pad]
@@ -738,13 +738,13 @@ def Search(inclination = np.arange(30., 90., 2.),
   # so that the number of spectra and the noise properties are the same.
   print("Plotting figure 1...")
   inj_kwargs = dict(kwargs)
-  inj_kwargs.update({'line': line - 10.})
-  res = Compute(inject_contrast = 9e-3, inject_planet = planet, planet = planet, quiet = True, **inj_kwargs)
+  inj_kwargs.update({'line': line - 10., 'quiet': True})
+  res = Compute(inject_contrast = 2e-2, inject_planet = planet, planet = planet, **inj_kwargs)
   fig1 = res['fig']
   inj_sig = (res['signal'] - bmu) / bstd
   fig1.suptitle('%d$\sigma$ Injected Signal' % inj_sig, fontsize = 30, y = 0.95)
   fig1.savefig('injection_river.pdf', bbox_inches = 'tight')
-  
+
   # --- FIGURE 2: Triangle plot
   print("Plotting figure 2...")
   fig2, ax2 = pl.subplots(3,3)
