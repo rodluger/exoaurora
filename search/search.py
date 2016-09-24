@@ -513,15 +513,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
       for s in star[i]:
         if len(s):
           y0[s] = np.nanmedian(y0[np.where(np.abs(x - wav[s][0]) < med_mask_sz)])
-      
-      # High pass filter? `filter_sz` angstrom(s) wide, 2nd order SavGol
-      if filter_sz:
-        window = int(filter_sz / np.nanmedian(x[1:] - x[:-1]))
-        if not (window % 2):
-          window += 1
-        filt = savgol_filter(y0, window, 2)
-        y0 = y0 - filt + np.nanmedian(y0)
-    
+                
       # Switch frames?
       if frame == 'star':
         # This is the default frame the data is stored in
@@ -550,7 +542,15 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
           ax[0].plot(x[e], y[e], color = 'g', alpha = 0.75, lw = 1.5)
         for s in star[i]:
           ax[0].plot(x[s], y[s], color = 'r', alpha = 0.75, lw = 1.5)
-    
+  
+  # High pass median filter? `filter_sz` angstrom(s) wide
+  if filter_sz:
+    window = int(filter_sz / np.nanmedian(x[1:] - x[:-1]))
+    if not (window % 2):
+      window += 1
+    filt = medfilt(fstack, window)
+    fstack = fstack - filt + np.nanmedian(fstack)
+
   # Plot the stacked flux
   if plot:
     a = np.argmax(xstack > line - wpca_mask_sz / 2.)
