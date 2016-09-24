@@ -75,6 +75,9 @@ if show_contour:
     # Contrast, Resolving power, auroral power grid
     bins = 100
 
+    FWHM = 0.0186*1.0e-4
+    R_limit = lam_0/FWHM
+
     watts = np.logspace(9,15,bins)
     resolver = np.logspace(1,6,bins)
 
@@ -87,7 +90,6 @@ if show_contour:
             # Compute auroral flux line profile and hi-res wavelength array
             # Compute delta_lam
             dl = lam_0/resolver[jj]
-            FWHM = 0.0186*1.0e-4
             wave_hires = cu.make_wave_array(lam_0,dl,FWHM)
 
             aurora = cu.create_auroral_line(lam_0, watts[ii], 1.0, proxcen,
@@ -131,6 +133,9 @@ if show_contour:
     cbar.set_label(r"Planet-Star Contrast", rotation=270, labelpad=25)
 
     ax.plot(watts,ew_r, color="white", lw=3, ls="--")
+
+    # Plot limiting resolving power
+    ax.axhline(R_limit,color="red",ls="--",lw=3)
 
     # Format
     ax.set_ylim(resolver.min(),resolver.max())
