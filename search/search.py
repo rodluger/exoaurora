@@ -498,7 +498,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
       #     N = int((2457400 - jd[i]) / planet.period) + 1.
       #     print(jd[i] + N * planet.period)
       # 
-      # At a phase of 0.2, the figure in the paper shows that the planet is
+      # At a phase of 0.2, the figure in our paper shows that the planet is
       # at a maximum redshift relative to the star (and to Earth). This means that
       # the star should be at a maximum blueshift relative to the barycenter,
       # corresponding to a minimum in the RV curve.
@@ -706,21 +706,16 @@ def Search(inclination = np.arange(30., 90., 2.),
     period = data['period']
     mean_longitude = data['mean_longitude']
     stellar_mass = data['stellar_mass']
-  
+    
   # Here we compute the distribution of the values of the
-  # maximum signals at each wavelength; we will normalize
-  # stuff below by the standard deviation of this distribution.
+  # maximum signals at each wavelength (to compute significance later)
   bmax = np.max(bflx, axis = (1,2,3,4))
   bmu = np.nanmean(bmax)
   bstd = np.nanstd(bmax)
-  bmax -= bmu
-  bmax /= bstd
   
-  # The binned flux at the line as a function of all the grid params,
-  # normalized to the standard deviation of the peak signals
-  bline = bflx[len(bflx) // 2]
-  bline -= bmu
-  bline /= bstd
+  # The binned flux at the line as a function of all the grid params
+  bline = bflx[np.argmin(np.abs(line - bins))]
+  blinemax = bmax[np.argmin(np.abs(line - bins))]
   
   # The best-fitting planet params
   planet = ProxCenB()
@@ -750,9 +745,9 @@ def Search(inclination = np.arange(30., 90., 2.),
   fig2, ax2 = pl.subplots(3,3)
   fig2.subplots_adjust(wspace = 0.08, hspace = 0.1, top = 0.975, bottom = 0.15)
   # The marginalized distributions
-  ax2[0,0].plot(inclination, np.max(bline, axis = (1,2,3)), color = 'k')
-  ax2[1,1].plot(period, np.max(bline, axis = (0,2,3)), color = 'k')
-  ax2[2,2].plot(mean_longitude, np.max(bline, axis = (0,1,3)), color = 'k')
+  ax2[0,0].plot(inclination, np.max(bline, axis = (1,2,3)) - 1., color = 'k')
+  ax2[1,1].plot(period, np.max(bline, axis = (0,2,3)) - 1., color = 'k')
+  ax2[2,2].plot(mean_longitude, np.max(bline, axis = (0,1,3)) - 1., color = 'k')
   # Indicate the 1-sigma bounds
   ax2[1,1].axvline(11.186, color = 'k', ls = '--')
   ax2[1,1].axvspan(11.186 - 0.002, 11.186 + 0.002, color = 'k', alpha = 0.075)
@@ -799,10 +794,22 @@ def Search(inclination = np.arange(30., 90., 2.),
   ax2[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 18)
   fig2.savefig('triangle.pdf', bbox_inches = 'tight')
   
-  # --- FIGURE 3: The distribution of signal maxima at each wavelength (this gives us the FAP)
+  #--- FIGURE 3: Plot bmax versus wavelength
   print("Plotting figure 3...")
+  fig4, ax4 = pl.subplots(1, figsize = (12,4))
+  ax4.plot(bins, bmax - 1., 'k-', lw = 0.5, zorder = -2)
+  ax4.plot(line, blinemax - 1., 'ro', markeredgecolor = 'none')
+  ax4.axhline(blinemax - 1., color = 'r', ls = '--')
+  ax4.margins(0, None)
+  ax4.yaxis.set_major_locator(MaxNLocator(nbins = 5))
+  ax4.set_xlabel('Wavelength ($\AA$)', fontsize = 28)
+  ax4.set_ylabel('Fractional Signal', fontsize = 28)
+  [tick.label.set_fontsize(22) for tick in ax4.xaxis.get_major_ticks() + ax4.yaxis.get_major_ticks()]
+  fig4.savefig('max_signal_vs_wavelength.pdf', bbox_inches = 'tight') 
+
+  # --- FIGURE 4: The distribution of signal maxima at each wavelength (this gives us the FAP)
+  print("Plotting figure 4...")
   fig3, ax3 = pl.subplots(1)
-  blinemax = bmax[len(bmax) // 2]
   nb = len(np.where(bmax >= blinemax)[0])
   fap = nb / len(bmax)
   fap_mult, fap_exp = [int(n) for n in ("%.0e" % fap).split("e")]
@@ -811,35 +818,19 @@ def Search(inclination = np.arange(30., 90., 2.),
   else:
     fap_sgn = r"\approx"
   fap_str = r'$\mathrm{FAP} %s %d \times 10^{%d}$' % (fap_sgn, fap_mult, fap_exp)
-  n, b, _ = ax3.hist(bmax, bins = 30, color = 'w')
-  d = np.digitize(blinemax, b)
+  n, b, _ = ax3.hist(bmax - 1., bins = 30, color = 'w')
+  d = np.digitize(blinemax - 1., b)
   if d == len(b): 
     d -= 1
   ax3.axvline(b[d] - 0.5 * (b[1] - b[0]), color = 'r', ls = '--')
   ax3.margins(0.1, None)
   ax3.set_ylabel(r'Number of signals', fontsize = 22)
-  ax3.set_xlabel(r'Significance ($\sigma$)', fontsize = 22)
+  ax3.set_xlabel(r'Fractional strength', fontsize = 22)
   ax3.annotate(fap_str, xy = (0.975, 0.95), 
                xycoords = 'axes fraction', ha = 'right', 
                va= 'top', fontsize = 20)
   [tick.label.set_fontsize(16) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
   fig3.savefig('fap.pdf', bbox_inches = 'tight')
-  
-  #--- FIGURE 4: Actually plot bmax versus wavelength
-  print("Plotting figure 4...")
-  fig4, ax4 = pl.subplots(1, figsize = (12,4))
-  ax4.plot(bins, bmax, 'k-', lw = 0.5, zorder = -2)
-  ax4.annotate('', xy=(line, blinemax), xycoords='data',
-              xytext=(0, 95), textcoords='offset points',
-              arrowprops=dict(arrowstyle="simple",
-                              fc='r', ec="none"))
-  ax4.margins(0, None)
-  ax4.axhspan(ax4.get_ylim()[0], blinemax - 0.01, color = 'w', alpha = 0.85)
-  ax4.axhline(blinemax - 0.01, color = 'k', lw = 1, zorder = 100)
-  ax4.set_xlabel('Wavelength ($\AA$)', fontsize = 28)
-  ax4.set_ylabel('Significance ($\sigma$)', fontsize = 28)
-  [tick.label.set_fontsize(22) for tick in ax4.xaxis.get_major_ticks() + ax4.yaxis.get_major_ticks()]
-  fig4.savefig('max_signal_vs_wavelength.pdf', bbox_inches = 'tight') 
 
   #--- FIGURE 5: Plot the "river plot" for the best solution
   print("Plotting figure 5...")
