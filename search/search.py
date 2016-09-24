@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-utils.py
---------
+search.py
+---------
+
+Searching the HARPS data for the OI emission signal.
+
+TODO
+----
+- Might need to compute signal relative to immediate vicinity?
 
 '''
 
@@ -10,7 +16,7 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 import matplotlib as mpl
 mpl.rcParams['font.family'] = ['serif']
 mpl.rcParams['font.serif'] = ['Times New Roman']
-from .kepler import RadialVelocity
+from kepler import RadialVelocity
 import numpy as np
 from sklearn.decomposition import PCA
 from wpca import WPCA
@@ -55,7 +61,7 @@ class Spectrum(object):
   HeliumYellow = 5875.6 # Activity tracer?
   MysteryLineII = 5540.07 # Prominent in both star and earth... Weird!
   
-  EarthLines = [MysteryLineII, OxygenGreen, OxygenRedI, OxygenRedII]
+  EarthLines = [MysteryLineII, NitrogenUVI, OxygenGreen, OxygenRedI, OxygenRedII]
   StarLines = [MysteryLineII, OxygenGreen, MysteryLineI, SodiumDI, SodiumDII, HeliumYellow]
 
 class Planet(object):
@@ -162,7 +168,7 @@ class ProxCenB(Planet):
       self.inclination = self._inclination()
     self.mass = self._mass()
  
-def GaussianLine(x, line = Spectrum.OxygenGreen, fwhm = 0.1, A = 1.):
+def GaussianLine(x, line = Spectrum.OxygenGreen, fwhm = 0.05, A = 1.):
   '''
   
   '''
@@ -196,7 +202,7 @@ def ReadFITS():
   # This is be coded up to allow importing of the UVES dataset as well
   for dataset in ['HARPS']:
     
-    files = glob.glob(os.path.join(os.path.dirname(os.path.dirname(__file__)), dataset, '*.fits'))
+    files = glob.glob(os.path.join(os.path.dirname(__file__), dataset, '*.fits'))
     for file in files:
 
       # Read the data
@@ -247,8 +253,11 @@ def GetData():
     
     # Apply the system offset. This was determined empirically by matching the
     # stellar Na D I and II lines. This calibration is accurate to ~ 0.01 A.
+    # Note that HARPS spectra are actually all in the same reference frame
+    # (heliocentric? I'm not sure), so this offset puts us in the frame of 
+    # Proxima Centauri for all spectra.
     wav /= SYSTEM_OFFSET
-        
+    
     # Save    
     print("Saving dataset...")
     result = {'wav': wav, 'jd': jd, 'flx': flx, 'err': err, 'dataset': dataset,
@@ -289,10 +298,10 @@ def RemoveStellarLines(wav, flx, weights = None, npc = 5, inds = None):
 
 def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot = True, 
             plot_sz = 10, npc = 10, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
-            bin_sz = 0.1, mask_star = True, med_mask_sz = 5,
+            bin_sz = 0.05, mask_star = True, med_mask_sz = 5, fwhm = 0.05,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
-            high_pass_filter = True, crop_outliers = True, stack_lims = [(0.9840, 1.0160), (0.9960, 1.0090)], 
-            fap_iter = 0, clobber = False, quiet = False, plot_gaussian_fit = False, filter = 'True'):
+            crop_outliers = True, clobber = False, quiet = False, spectrum_filter = 'True', 
+            max_frac_noise = 3, wpca_weights = 'exptime', filter_sz = 1.):
   '''
   
   '''
@@ -313,6 +322,18 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   dataset = data['dataset']
   total_exp = 0
   
+  # Some wavelength-specific params. The noise changes a lot from the UV to the vis,
+  # so we need to change our plotting scale.
+  if line < 4000:
+    spec_amp = 0.001
+    stack_lims = [(0.6, 1.4), (0.8, 1.2)]
+  elif line < 4500:
+    spec_amp = 0.0025
+    stack_lims = [(0.9, 1.1), (0.95, 1.05)]
+  else:
+    spec_amp = 0.01
+    stack_lims = [(0.9840, 1.0160), (0.9960, 1.0100)]
+  
   # Crop to a smaller window centered on the line
   inds = np.where((wav >= line - wpca_sz / 2.) & (wav <= line + wpca_sz / 2.))[0]
   wav = wav[inds]
@@ -320,16 +341,16 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
 
   # Inject a signal for injection/recovery tests?
   if inject_contrast > 0.:
-    print("Injecting signal...")
+    if not quiet: print("Injecting signal...")
     for i in range(len(flx)):
       # Get planet line wavelength in the stellar frame
       x = ApplyDopplerFactor(line, inject_planet.doppler_factor(jd[i]))
-      # Get indices corresponding to the FWHM of the line
-      inds = np.where(np.abs(wav - x) < 0.1)[0]
+      # Get indices corresponding to the FWHM of the line (TODO: Check this)
+      inds = np.where(np.abs(wav - x) <= fwhm / 2.)[0]
       # Compute the flux in the stellar spectrum at those indices
       z = np.trapz(flx[i][inds], wav[inds])
       # Compute the line profile. The amplitude is contrast * z
-      flx[i] += GaussianLine(wav, line = x, A = inject_contrast * z)
+      flx[i] += GaussianLine(wav, line = x, fwhm = fwhm, A = inject_contrast * z)
 
   # Get masks in the stellar frame
   if not quiet: print("Applying masks...")
@@ -339,8 +360,13 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   for i in range(len(flx)):
   
     # Set weights according to exposure time
-    weights[:,i] = np.sqrt(exp[i])
-  
+    if wpca_weights == 'exptime':
+      weights[:,i] = np.sqrt(exp[i])
+    elif wpca_weights == 'std':
+      weights[:,i] = 1. / np.nanstd(flx[i] / np.nanmedian(flx[i]))
+    else:
+      raise ValueError('Parameter `wpca_weights` must be one of `exptime` or `std`.')
+      
     # Add mask for each of the star's lines
     for star_line in Spectrum.StarLines:
       m = list(np.where((wav > star_line - wpca_mask_sz / 2.) & (wav < star_line + wpca_mask_sz / 2.))[0])
@@ -393,7 +419,13 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   # Compute the planet doppler factor now, since we use it a couple times below
   pdf = [planet.doppler_factor(j) for j in jd]
   
-  # Crop outliers in planet frame?
+  # Crop outliers in planet frame? This is useful only for the FAP calculation,
+  # since we don't want an outlier in a single spectrum affecting our FAP. Note
+  # that this is somewhat asymmetrical, since we're not removing outliers in the
+  # 5577A window: we could then detect a "signal" due to a single outlier in one
+  # spectrum. But we must allow for time-variable emission; plus, if we do find
+  # such a signal because of an outlier, it would be easy to tell which spectrum 
+  # it came from, and we can deal with it then.
   if crop_outliers:
 
     # Shift to planet frame. If the planet is moving away from us (redshifted),
@@ -402,9 +434,12 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     x = [ApplyDopplerFactor(wav, -p) for p in pdf]
     flxp = np.array([np.interp(wav, xi, flxi) for xi, flxi in zip(x, flx)])
   
-    # Remove 10-sigma outliers in each wavelength bin
+    # Remove 10-sigma outliers in each wavelength bin, except where we're looking
+    # for our signal (which could be highly variable).
     med = np.nanmedian(flxp, axis = 1)
     for j, _ in enumerate(wav):
+      if (wav[j] > line - wpca_mask_sz / 2.) and (wav[j] < line + wpca_mask_sz / 2.):
+        continue
       y = flxp[:,j] / med
       m = np.nanmedian(y)
       MAD = 1.4826 * np.nanmedian(np.abs(y - m))
@@ -419,8 +454,6 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   # The stacked flux
   xstack = np.array(wav)
   fstack = np.zeros_like(xstack)
-  fstack_fap = np.empty((fap_iter, len(xstack)))
-  planet_fap = ProxCenB()
   
   # The figure
   if plot:
@@ -439,7 +472,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   for i in range(len(flx)):
     
     # User-defined filter
-    if not eval(filter):
+    if not eval(spectrum_filter):
       continue
     
     # Compute the planet mask in the stellar frame. If the planet is moving away
@@ -452,9 +485,13 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
       
       # The de-trended spectra
       x = np.array(wav)
-      y = planet.phase(jd[i]) + 0.01 * flx[i] / np.nanmedian(flx[i])
+      y = planet.phase(jd[i]) + spec_amp * flx[i] / np.nanmedian(flx[i])
       y0 = np.array(flx[i])
       
+      # Is the spectrum too noisy?
+      if np.std(y0 / np.nanmedian(y0)) > max_frac_noise:
+        continue
+           
       # DOPPLER SHIFTING SANITY CHECK:
       #
       #   if (planet.phase(jd[i]) < 0.22) and (planet.phase(jd[i]) > 0.18):
@@ -476,15 +513,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
       for s in star[i]:
         if len(s):
           y0[s] = np.nanmedian(y0[np.where(np.abs(x - wav[s][0]) < med_mask_sz)])
-      
-      # High pass filter? 5 angstroms wide, 2nd order SavGol
-      if high_pass_filter:
-        window = int(5. / np.nanmedian(x[1:] - x[:-1]))
-        if not (window % 2):
-          window += 1
-        filt = savgol_filter(y0, window, 2)
-        y0 = y0 - filt + np.nanmedian(y0)
-    
+                
       # Switch frames?
       if frame == 'star':
         # This is the default frame the data is stored in
@@ -501,16 +530,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
       # Stacking: interpolate to original grid and add
       fstack += np.interp(xstack, x, y0)
       total_exp += exp[i]
-      
-      # Stack to compute the false alarm probability
-      # NOTE: This is a bit hacky, but we purposefully Doppler-shift the spectra in
-      # the **opposite** direction here (no negative sign preceding `pdf[i]` below)
-      # to prevent stacking up features from the actual planet when computing the FAP.
-      for f in range(fap_iter):
-        planet_fap.randomize()
-        x_fap = ApplyDopplerFactor(x, pdf[i])
-        fstack_fap[f] += np.interp(xstack, x_fap, y0)
-    
+          
       # Plot!
       if plot:
         mask = np.array(sorted(list(set(np.concatenate([pcb[i], [item for sublist in earth[i] for item in sublist], [item for sublist in star[i] for item in sublist]])))), dtype = int)
@@ -522,7 +542,15 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
           ax[0].plot(x[e], y[e], color = 'g', alpha = 0.75, lw = 1.5)
         for s in star[i]:
           ax[0].plot(x[s], y[s], color = 'r', alpha = 0.75, lw = 1.5)
-    
+  
+  # High pass median filter? `filter_sz` angstrom(s) wide
+  if filter_sz:
+    window = int(filter_sz / np.nanmedian(x[1:] - x[:-1]))
+    if not (window % 2):
+      window += 1
+    filt = medfilt(fstack, window)
+    fstack = fstack - filt + np.nanmedian(fstack)
+
   # Plot the stacked flux
   if plot:
     a = np.argmax(xstack > line - wpca_mask_sz / 2.)
@@ -550,64 +578,24 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   
   # This is the signal in the bin centered at the line
   signal = bflx[len(bflx) // 2]
-  
-  # Generate a histogram to compute the false alarm probability
-  bflx_fap = np.array(bflx)
-  for f in range(fap_iter):
-    bflxf = np.zeros_like(bin_centers)
-    bnrm = np.zeros_like(bin_centers)
-    for x, z in zip(xstack, fstack_fap[f] / np.nanmedian(fstack_fap[f])):
-      if (x >= bin_centers[0] - bin_sz / 2.) and (x < bin_centers[-1] + bin_sz / 2.):
-        i = np.argmin(np.abs(bin_centers - x))
-        bflxf[i] += z
-        bnrm[i] += 1
-    bflxf /= bnrm
-    bflxf = bflxf[pad:-pad]
-    bflx_fap = np.append(bflx_fap, bflxf)
-    
-  # The detection significance
-  std = np.nanstd(bflx_fap)
-  sig = (bflx[len(bflx) // 2] - 1) / std
+  std = np.nanstd(bflx)
+  snr = (signal - 1.) / std
         
-  # Compute the false alarm probability: number of bins with at least the 
-  # significance of the detection, divided by total number of bins
-  nb = len(np.where(np.abs(bflx_fap - 1) / std >= sig)[0])
-  fap = nb / len(bflx_fap)
-  
-  if (sig > 0):
-    fap_mult, fap_exp = [int(n) for n in ("%.0e" % fap).split("e")]
-    if nb == 1:
-      fap_sgn = "<"
-    else:
-      fap_sgn = "="
-    fap_str = r'$\mathrm{FAP} %s %d \times 10^{%d}$' % (fap_sgn, fap_mult, fap_exp)
-  else:
-    fap_str = r'$\mathrm{No\ detection}$'
-  
   # The histogram inset
   if plot:
-    ax[3] = pl.axes([0.175 + 0.01, 0.36 + 0.01, 0.2, 0.15], zorder = 2)
-    n, bins, _ = ax[3].hist((bflx_fap - 1.) / std, bins = 30, color = 'w')
-    d = np.digitize(sig, bins)
+    ax[3] = pl.axes([0.195 + 0.01, 0.36 + 0.01, 0.2, 0.15], zorder = 2)
+    n, bins, _ = ax[3].hist((bflx - 1.) / std, bins = 30, color = 'w')
+    d = np.digitize(snr, bins)
     if d == len(bins): 
       d -= 1
-      
-    if plot_gaussian_fit:
-      df = np.linspace(-sig, sig, 1000)
-      mu, sigma = norm.fit((bflx - 1) / std)
-      N = norm.pdf(df, mu, sigma)
-      ax[3].plot(df, N * np.max(n) / np.max(N), 'b-')
-    
+        
     ax[3].axvline(bins[d] - 0.5 * (bins[1] - bins[0]), color = 'r', ls = '--')
     ax[3].set_yscale('log')
-    ax[3].set_ylim(0.5, 2 * np.max(n))
-    ax[3].set_yticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6])
-    ax[3].set_yticklabels(['0', '1', '2', '3', '4', '5', '6'])
+    ax[3].set_ylim(0.8, 1e3)
     ax[3].margins(0.1, None)
     ax[3].set_ylabel(r'$\log\ N$', fontsize = 14)
-    ax[3].set_xlabel(r'$\Delta f\ (\sigma$)', fontsize = 14)
-    ax[3].set_title(fap_str, fontsize = 16)
-    rect = Rectangle((0.125 + 0.01, 0.36 - 0.055 + 0.01), 0.26, 0.245, facecolor='w', edgecolor='k',
+    ax[3].set_xlabel(r'SNR', fontsize = 14)
+    rect = Rectangle((0.125 + 0.01, 0.36 - 0.055 + 0.01), 0.28, 0.235, facecolor='w', edgecolor='k',
                       transform=fig.transFigure, alpha = 0.85, zorder=1)
     fig.patches.append(rect)
 
@@ -623,8 +611,7 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   # Print some info
   if not quiet:
     print('Total integration time: %.1f hours' % (total_exp / 3600.))
-    print('Number of samples in FAP calculation: %d' % len(bflx_fap))
-    print('Significance (sigma): %.2f' % sig)
+    print('SNR: %.2f' % snr)
   
   # Appearance
   if plot:
@@ -660,68 +647,207 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
     ax[0].legend(loc = 'upper right', fontsize = 20)
 
   return {'fig': fig, 'ax': ax, 'signal': bflx[len(bflx) // 2],
-          'bins': bin_centers, 'bflx': bflx, 'std': std, 'snr': sig}
+          'bins': bin_centers, 'bflx': bflx, 'snr': snr}
 
 def Search(inclination = np.arange(30., 90., 2.), 
            period = np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.002 / 2),
            mean_longitude = np.arange(110. - 3 * 8., 110. + 3 * 8., 8. / 2), 
-           stellar_mass = [0.120], **kwargs):
+           stellar_mass = [0.120], clobber = False, 
+           period_ticks = [11.182, 11.184, 11.186, 11.188, 11.190],
+           mean_longitude_ticks = [90., 100., 110., 120., 130.],
+           inclination_ticks = [35, 45, 55, 65, 75, 85],
+           **kwargs):
   '''
   
   '''
   
-  # Get the data
-  data = GetData()
-  planet = ProxCenB()
-  kwargs.update({'data': data, 'quiet': True})
-  
-  # Get the bin array
-  wpca_sz = kwargs.get('wpca_sz', 250)
-  bin_sz = kwargs.get('bin_sz', 0.1)
   line = kwargs.get('line', Spectrum.OxygenGreen)
-  bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
-  pad = int(0.05 * len(bins))
-  bins = bins[pad:-pad]
-  
-  # Loop over planet params
-  print("Running grid search...")
-  bflx = np.zeros((len(bins), len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
-  for i, _ in enumerate(inclination):
-    print("Completed about %d%%..." % (100 * i / len(inclination)))
-    for p, _ in enumerate(period):
-      for m, _ in enumerate(mean_longitude):
-        for s, _ in enumerate(stellar_mass):
-          planet.inclination = inclination[i]
-          planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
-          planet.period = period[p]
-          planet.stellar_mass = stellar_mass[s]
-          planet.mean_longitude = mean_longitude[m]
-          res = Compute(planet = planet, plot = False, **kwargs)
-          bflx[:,i,p,m,s] = res['bflx']
-  print("Saving...")
-  np.savez(os.path.join(os.path.dirname(__file__), 'search.npz'), 
-           bins = bins, bflx = bflx, inclination = inclination, period = period,
-           mean_longitude = mean_longitude, stellar_mass = stellar_mass)
-  
-  # DEBUG
-  quit()
-  # XXXXX
-  
-  bmax = np.max(bflx, axis = (1,2,3,4))
-  bmax -= np.nanmean(bmax)
-  bmax /= np.nanstd(bmax)
-  pl.plot(bins, bmax)
-  pl.show()
-
-def Plot(figname = 'plot.pdf', suptitle = None, planet = ProxCenB(), **kwargs):
-  '''
-  
-  '''
-  
-  # Get the data
+  search_file = os.path.join(os.path.dirname(__file__), 'search.npz')
   data = GetData()
-  res = Compute(planet = planet, data = data, **kwargs)
-  fig = res['fig']
-  if suptitle is not None:
-    fig.suptitle(suptitle, fontsize = 30, y = 0.95)
-  fig.savefig(figname, bbox_inches = 'tight')
+  kwargs.update({'data': data})
+  
+  if clobber or not os.path.exists(search_file):
+    
+    # Initialize
+    planet = ProxCenB()
+    kwargs.update({'quiet': True})
+  
+    # Get the bin array
+    wpca_sz = kwargs.get('wpca_sz', 250)
+    bin_sz = kwargs.get('bin_sz', 0.05)
+    bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
+    pad = int(0.05 * len(bins))
+    bins = bins[pad:-pad]
+  
+    # Loop over planet params
+    print("Running grid search...")
+    bflx = np.zeros((len(bins), len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
+    for i, _ in enumerate(inclination):
+      print("Completed about %d%%..." % (100 * i / len(inclination)))
+      for p, _ in enumerate(period):
+        for m, _ in enumerate(mean_longitude):
+          for s, _ in enumerate(stellar_mass):
+            planet.inclination = inclination[i]
+            planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
+            planet.period = period[p]
+            planet.stellar_mass = stellar_mass[s]
+            planet.mean_longitude = mean_longitude[m]
+            res = Compute(planet = planet, plot = False, **kwargs)
+            bflx[:,i,p,m,s] = res['bflx']            
+    print("Saving...")
+    np.savez(search_file, bins = bins, bflx = bflx, inclination = inclination, period = period,
+             mean_longitude = mean_longitude, stellar_mass = stellar_mass)
+  else:
+    print("Loading saved search...")
+    data = np.load(search_file)
+    bins = data['bins']
+    bflx = data['bflx']
+    inclination = data['inclination']
+    period = data['period']
+    mean_longitude = data['mean_longitude']
+    stellar_mass = data['stellar_mass']
+  
+  # Here we compute the distribution of the values of the
+  # maximum signals at each wavelength; we will normalize
+  # stuff below by the standard deviation of this distribution.
+  bmax = np.max(bflx, axis = (1,2,3,4))
+  bmu = np.nanmean(bmax)
+  bstd = np.nanstd(bmax)
+  bmax -= bmu
+  bmax /= bstd
+  
+  # The binned flux at the line as a function of all the grid params,
+  # normalized to the standard deviation of the peak signals
+  bline = bflx[len(bflx) // 2]
+  bline -= bmu
+  bline /= bstd
+  
+  # The best-fitting planet params
+  planet = ProxCenB()
+  i, p, m, s = np.unravel_index(np.nanargmax(bline), bline.shape)
+  planet.inclination = inclination[i]
+  planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
+  planet.period = period[p]
+  planet.stellar_mass = stellar_mass[s]
+  planet.mean_longitude = mean_longitude[m]
+
+  # --- FIGURE 1: Injection test (~8 sigma). This is our nominal detection threshold.
+  # Note that we inject 10 angstroms redward of the line we're interested in, so we
+  # don't stack an injected signal on top of an actual signal. Note also that we 
+  # purposefully inject assuming the same planet params as those of the peak signal,
+  # so that the number of spectra and the noise properties are the same.
+  print("Plotting figure 1...")
+  inj_kwargs = dict(kwargs)
+  inj_kwargs.update({'line': line - 10., 'quiet': True})
+  res = Compute(inject_contrast = 2e-2, inject_planet = planet, planet = planet, **inj_kwargs)
+  fig1 = res['fig']
+  inj_sig = (res['signal'] - bmu) / bstd
+  fig1.suptitle('%d$\sigma$ Injected Signal' % inj_sig, fontsize = 30, y = 0.95)
+  fig1.savefig('injection_river.pdf', bbox_inches = 'tight')
+
+  # --- FIGURE 2: Triangle plot
+  print("Plotting figure 2...")
+  fig2, ax2 = pl.subplots(3,3)
+  fig2.subplots_adjust(wspace = 0.08, hspace = 0.1, top = 0.975, bottom = 0.15)
+  # The marginalized distributions
+  ax2[0,0].plot(inclination, np.max(bline, axis = (1,2,3)), color = 'k')
+  ax2[1,1].plot(period, np.max(bline, axis = (0,2,3)), color = 'k')
+  ax2[2,2].plot(mean_longitude, np.max(bline, axis = (0,1,3)), color = 'k')
+  # Indicate the 1-sigma bounds
+  ax2[1,1].axvline(11.186, color = 'k', ls = '--')
+  ax2[1,1].axvspan(11.186 - 0.002, 11.186 + 0.002, color = 'k', alpha = 0.075)
+  ax2[2,2].axvline(110., color = 'k', ls = '--')
+  ax2[2,2].axvspan(110. - 8., 110. + 8., color = 'k', alpha = 0.075)
+  # The two-parameter heatmaps
+  ax2[1,0].imshow(np.max(bline, axis = (2,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(period), np.max(period)), cmap = pl.get_cmap('Greys'), origin = 'lower')
+  ax2[2,0].imshow(np.max(bline, axis = (1,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'), origin = 'lower')
+  ax2[2,1].imshow(np.max(bline, axis = (0,3)).T, aspect = 'auto', extent = (np.min(period), np.max(period), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'), origin = 'lower')
+  # Tweak the appearance
+  for axis in ax2.flatten():
+    axis.margins(0,0)
+    axis.ticklabel_format(useOffset = False)
+    for tick in axis.get_xticklabels() + axis.get_yticklabels():
+      tick.set_rotation(45)
+  for axis in [ax2[0,1], ax2[0,2], ax2[1,2]]:
+    axis.set_visible(False)
+  for axis in [ax2[0,0], ax2[1,0], ax2[1,1]]:
+    axis.xaxis.set_ticklabels([])
+  ylims = np.array([axis.get_ylim() for axis in [ax2[0,0], ax2[1,1], ax2[2,2]]])
+  ymin = np.min(ylims)
+  ymax = np.max(ylims) 
+  yrng = ymax - ymin
+  ymin -= 0.1 * yrng
+  ymax += 0.1 * yrng
+  ax2[2,1].yaxis.set_ticklabels([])
+  for axis in [ax2[0,0], ax2[1,1], ax2[2,2]]:
+    axis.yaxis.tick_right()
+    axis.set_ylim(ymin, ymax)
+    axis.margins(0, None)
+  ax2[0,0].set_xticks(inclination_ticks)
+  ax2[1,1].set_xticks(period_ticks)
+  ax2[2,2].set_xticks(mean_longitude_ticks)
+  ax2[1,0].set_xticks(inclination_ticks)
+  ax2[1,0].set_yticks(period_ticks)
+  ax2[2,0].set_xticks(inclination_ticks)
+  ax2[2,0].set_yticks(mean_longitude_ticks)
+  ax2[2,1].set_xticks(period_ticks)
+  ax2[2,1].set_yticks(mean_longitude_ticks)
+  ax2[1,0].set_ylabel('Period (days)', labelpad = 10, fontsize = 16)
+  ax2[2,0].set_ylabel('Mean longitude ($^\circ$)', labelpad = 18, fontsize = 16)
+  ax2[2,0].set_xlabel('Inclination ($^\circ$)', labelpad = 21, fontsize = 18)
+  ax2[2,1].set_xlabel('Period (days)', labelpad = 8, fontsize = 18)
+  ax2[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 18)
+  fig2.savefig('triangle.pdf', bbox_inches = 'tight')
+  
+  # --- FIGURE 3: The distribution of signal maxima at each wavelength (this gives us the FAP)
+  print("Plotting figure 3...")
+  fig3, ax3 = pl.subplots(1)
+  blinemax = bmax[len(bmax) // 2]
+  nb = len(np.where(bmax >= blinemax)[0])
+  fap = nb / len(bmax)
+  fap_mult, fap_exp = [int(n) for n in ("%.0e" % fap).split("e")]
+  if nb == 1:
+    fap_sgn = "<"
+  else:
+    fap_sgn = r"\approx"
+  fap_str = r'$\mathrm{FAP} %s %d \times 10^{%d}$' % (fap_sgn, fap_mult, fap_exp)
+  n, b, _ = ax3.hist(bmax, bins = 30, color = 'w')
+  d = np.digitize(blinemax, b)
+  if d == len(b): 
+    d -= 1
+  ax3.axvline(b[d] - 0.5 * (b[1] - b[0]), color = 'r', ls = '--')
+  ax3.margins(0.1, None)
+  ax3.set_ylabel(r'Number of signals', fontsize = 22)
+  ax3.set_xlabel(r'Significance ($\sigma$)', fontsize = 22)
+  ax3.annotate(fap_str, xy = (0.975, 0.95), 
+               xycoords = 'axes fraction', ha = 'right', 
+               va= 'top', fontsize = 20)
+  [tick.label.set_fontsize(16) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
+  fig3.savefig('fap.pdf', bbox_inches = 'tight')
+  
+  #--- FIGURE 4: Actually plot bmax versus wavelength
+  print("Plotting figure 4...")
+  fig4, ax4 = pl.subplots(1, figsize = (12,4))
+  ax4.plot(bins, bmax, 'k-', lw = 0.5, zorder = -2)
+  ax4.annotate('', xy=(line, blinemax), xycoords='data',
+              xytext=(0, 95), textcoords='offset points',
+              arrowprops=dict(arrowstyle="simple",
+                              fc='r', ec="none"))
+  ax4.margins(0, None)
+  ax4.axhspan(ax4.get_ylim()[0], blinemax - 0.01, color = 'w', alpha = 0.85)
+  ax4.axhline(blinemax - 0.01, color = 'k', lw = 1, zorder = 100)
+  ax4.set_xlabel('Wavelength ($\AA$)', fontsize = 28)
+  ax4.set_ylabel('Significance ($\sigma$)', fontsize = 28)
+  [tick.label.set_fontsize(22) for tick in ax4.xaxis.get_major_ticks() + ax4.yaxis.get_major_ticks()]
+  fig4.savefig('max_signal_vs_wavelength.pdf', bbox_inches = 'tight') 
+
+  #--- FIGURE 5: Plot the "river plot" for the best solution
+  print("Plotting figure 5...")
+  res = Compute(planet = planet, quiet = True, **kwargs)
+  fig5 = res['fig']
+  fig5.suptitle('Strongest Signal', fontsize = 30, y = 0.95)
+  fig5.savefig('strongest_river.pdf', bbox_inches = 'tight')
+
+# Reproduce Figures 2-6 in the paper
+if __name__ == '__main__':
+  Search()
