@@ -26,7 +26,7 @@ mpl.rc('text', usetex=True)
 
 show_plots = False
 
-save_plots = True
+save_plots = False
 
 show_contour = True
 
@@ -162,6 +162,8 @@ if show_contour:
     contrast = np.zeros((bins,bins))
     ew = np.zeros_like(watts)
 
+    R_limit = lam_0/FWHM
+
     for ii in range(len(watts)):
         for jj in range(len(resolver)):
 
@@ -213,14 +215,18 @@ if show_contour:
     # Contour Lines
     contour_levels = np.array([1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
     fmt = ticker.LogFormatterMathtext()
-    cln = ax.contour(watts, resolver, contrast.T, contour_levels, colors="black", lw=3.0)
-    plt.clabel(cln, inline=1, fontsize=14, fmt=fmt)
+    cln = ax.contour(watts, resolver, contrast.T, contour_levels, colors="white",
+                     lw=3.0)
+    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt)
 
     # Colorbar
     cbar = fig.colorbar(cax)
     cbar.set_label(r"Planet-Star Contrast", rotation=270, labelpad=25)
 
     ax.plot(watts,ew_r, color="white", lw=3, ls="--")
+
+    # Plot limiting resolving power
+    ax.axhline(R_limit,color="red",ls="--",lw=3)
 
     # Format
     ax.set_ylim(resolver.min(),resolver.max())
