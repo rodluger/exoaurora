@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset, inset_axes
 
 #Typical plot parameters that make for pretty plots
 mpl.rcParams['figure.figsize'] = (10,8)
@@ -24,11 +25,13 @@ mpl.rcParams['font.size'] = 20.0
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 mpl.rc('text', usetex=True)
 
-show_plots = False
+show_spec = True
+
+show_eqw = False
 
 save_plots = False
 
-show_contour = True
+show_contour = False
 
 # Init system object with Proxima Centauri defaults
 proxcen = cu.System()
@@ -72,7 +75,7 @@ for ii in range(len(watts)):
                                                      continuum)
 
 # Plot Planet flux
-if show_plots:
+if show_eqw:
 
     # Plot equivalent widths as a function of auroral power
     fig, ax = plt.subplots()
@@ -91,20 +94,23 @@ if show_plots:
     if save_plots:
         fig.savefig("eq_vs_power.pdf")
 
-    #plt.clf()
+if show_spec:
 
-    # Plot 1 test case
-
+    # Plot spectrum with injected aurora
     fig, ax = plt.subplots()
 
     # FWHM from Eric
+    vFWHM = 1.0
     FWHM = 0.0186*1.0e-4
-    dl = 50000*FWHM
+    dl = 70000*FWHM
+
+    # Auroral power
+    apow = 6.5e10
 
     wave_hires = cu.make_wave_array(lam_0,dl,FWHM)
 
      #Compute auroral flux line profile and hi-res wavelength array
-    aurora = cu.create_auroral_line(lam_0, 1e11, 1.0, proxcen,
+    aurora = cu.create_auroral_line(lam_0, apow, vFWHM, proxcen,
                                     wave_hires)
 
     # Using star's spectrum, get stellar flux over the hi-res array
@@ -127,7 +133,7 @@ if show_plots:
     continuum = np.median(ref_flux[mask])
 
     # Plot continuum
-    ax.axhline(y=continuum, color = "red", ls = "--", lw=3, label="Continuum")
+    #ax.axhline(y=continuum, color = "red", ls = "--", lw=3, label="Continuum")
 
     # Compute equivalent width
     ew = cu.equivalent_width(planet_flux[mask],wave_hires[mask],continuum)
@@ -139,10 +145,27 @@ if show_plots:
 
     # Format
     ax.set_ylabel(r"Flux [W/m$^2$/$\mu$m]")
-    ax.set_xlabel(r"Wavelength [\AA]")
+    ax.set_xlabel(r"Wavelength [\AA]$- 5577$\AA")
     ax.set_xlim(((wave_hires-lam_0)*1.0e4).min(),
                 ((wave_hires-lam_0)*1.0e4).max())
     ax.set_yscale("log")
+
+    # Inset axis
+    xmin = lam_0 - ew/2
+    xmax = lam_0 + ew/2
+    mask2 = (wave_hires >= xmin) & (wave_hires <= xmax)
+    ax2 = plt.axes([.61, .6, .32, .3])
+    ax2.plot((wave_hires[mask2])*1.0e4,planet_flux[mask2],color="black",lw=3)
+    ax2.fill_between((wave_hires[mask2])*1.0e4, continuum, 2.0*continuum,
+                    where=((wave_hires[mask2] < lam_0 + ew/2) & (wave_hires[mask2] > lam_0 - ew/2.)),
+                    facecolor='green', alpha = 0.2)
+    ax2.set_xlim((xmin*1.0e4, xmax*1.0e4))
+    xticks = [xmin*1.0e4, lam_0*1.0e4, xmax*1.0e4]
+    ax2.set_xticks(xticks)
+    ax2.set_xticklabels(["%.2f" % x for x in xticks])
+    plt.setp(ax2.get_xticklabels(), fontsize=12, rotation=0)
+    plt.setp(ax2.get_yticklabels(), fontsize=12, rotation=0)
+    ax2.set_yscale("log")
 
     fig.tight_layout()
 
@@ -222,9 +245,10 @@ if show_contour:
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, contrast.T, contour_levels,
                      colors=["black","black", "black", "black", "black"])
-    #plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, manual=manual_locations)
+    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, inline_spacing=20,
+               use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
-    zc = cln.collections; plt.setp(zc, linewidth=2)
+    plt.setp(cln.collections, linewidth=2)
 
     # Colorbar
     cbar = fig.colorbar(cax)
@@ -239,7 +263,7 @@ if show_contour:
     ax.axhline(R_limit,color="orange", ls="--", lw=3,
                label=r"Limiting Resolving Power")
 
-    # Format
+    # Axis Format
     ax.set_ylim(resolver.min(),resolver.max())
     ax.set_xscale("log")
     ax.set_yscale("log")
@@ -248,9 +272,12 @@ if show_contour:
     ax.set_xlabel(r"OI Auroral Power [W]")
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
-    # legend
-    leg=ax.legend(loc=0, fontsize=14)
-    leg.get_frame().set_alpha(0.7)
+    # Legend
+    leg=ax.legend(loc=0, fontsize=15)
+    leg.get_frame().set_alpha(0.0)
+    for text in leg.get_texts():
+        text.set_color("white")
+        text.set_va('center') # va is alias for "verticalalignment"
 
     plt.show()
 
