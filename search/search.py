@@ -647,7 +647,7 @@ class SearchWrap(object):
     res = Compute(planet = self.planet, **self.kwargs)
     return res['bflx']
 
-def PBSSearch(line = Spectrum.OxygenGreen, nodes = 5, ppn = 12, walltime = 100):
+def PBSSearch(line = Spectrum.OxygenGreen, nodes = 12, ppn = 12, walltime = 100):
   '''
   Submits a PBS cluster job to do the line search.
 
