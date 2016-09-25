@@ -28,6 +28,7 @@ from matplotlib.ticker import MaxNLocator, ScalarFormatter, FormatStrFormatter
 from matplotlib.patches import Rectangle
 import matplotlib.mlab as mlab
 import subprocess
+import argparse
 try:
   import pyfits
 except ImportError:
@@ -862,4 +863,12 @@ def Search(inclination = np.arange(30., 90., 2.),
 
 # Reproduce Figures 2-6 in the paper
 if __name__ == '__main__':
-  Search()
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-p", "--pbs", action = 'store_true', help = 'Run on a PBS cluster')
+  parser.add_argument("-l", "--line", default = Spectrum.OxygenGreen, type = float, help = 'Line wavelength (angstroms)')
+  args = parser.parse_args()
+  
+  if args.pbs:
+    PBSSearch(line = args.line)
+  else:
+    Search(line = args.line)
