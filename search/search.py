@@ -21,7 +21,7 @@ from scipy.stats import norm, tukeylambda
 from scipy.stats import t as student_t
 from scipy.signal import savgol_filter, medfilt
 import glob
-import os
+import os, sys
 import itertools
 import matplotlib.pyplot as pl
 from matplotlib.ticker import MaxNLocator, ScalarFormatter, FormatStrFormatter
@@ -662,7 +662,7 @@ def PBSSearch(line = Spectrum.OxygenGreen, nodes = 12, ppn = 12, walltime = 100)
   name = '%d' % np.floor(line)
   str_n = 'nodes=%d:ppn=%d,feature=%dcore' % (nodes, ppn, ppn)
   str_w = 'walltime=%d:00:00' % walltime
-  str_v = 'LINE=%.3f,NODES=%d,SEARCH_DIR=%s' % (line, nodes, os.path.dirname(__file__))
+  str_v = 'LINE=%.3f,NODES=%d,SEARCH_DIR=%s' % (line, nodes, os.path.dirname(os.path.realpath(sys.argv[0])))
   str_out = os.path.join(os.path.dirname(__file__), '%s.log' % name)
   qsub_args = ['qsub', pbsfile, 
                '-v', str_v, 
