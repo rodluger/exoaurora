@@ -675,8 +675,8 @@ def PBSSearch(line = Spectrum.OxygenGreen, nodes = 12, ppn = 12, walltime = 100)
   subprocess.call(qsub_args)
 
 def Search(inclination = np.arange(30., 90., 2.), 
-           period = np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.002 / 1),
-           mean_longitude = np.arange(110. - 3 * 8., 110. + 3 * 8., 8. / 1), 
+           period = [11.186], #np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.002 / 2),
+           mean_longitude = [110.], #np.arange(110. - 3 * 8., 110. + 3 * 8., 8. / 2), 
            stellar_mass = [0.120], clobber = False, 
            period_ticks = [11.182, 11.184, 11.186, 11.188, 11.190],
            mean_longitude_ticks = [90., 100., 110., 120., 130.],
@@ -728,6 +728,9 @@ def Search(inclination = np.arange(30., 90., 2.),
       period = data['period']
       mean_longitude = data['mean_longitude']
       stellar_mass = data['stellar_mass']
+    
+    # DEBUG
+    return    
     
     # Here we compute the distribution of the values of the
     # maximum signals at each wavelength (to compute significance later)
