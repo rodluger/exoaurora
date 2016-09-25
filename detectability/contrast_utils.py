@@ -547,7 +547,7 @@ class Telescope(object):
             Integration time [hrs]
         """
         # Compute spectral bandwidth
-        dl = self.bins*lam_0/self.R
+        dl = (lam_0/self.R) * self.bins
 
         # Integration time in hours for given signal-to-noise
         cs = self.cstar(System, lam_0) # Star photon counts
@@ -583,10 +583,10 @@ class Telescope(object):
             theta = (0.4/1.0e6)/(self.D/2.)*(180./np.pi)*3600.
 
             # Dark noise
-            cd = nr.cdark(ci.DE,ci.X,lam_0,self.D,theta,ci.DNHPIX)
+            cd = nr.cdark(ci.DE,ci.X,lam_0,self.D,theta,ci.DNHPIX) # * self.bins
 
             # Read noise
-            cr = nr.cread(ci.RE,ci.X,lam_0,self.D,theta,ci.DNHPIX,ci.DTMAX)
+            cr = nr.cread(ci.RE,ci.X,lam_0,self.D,theta,ci.DNHPIX,ci.DTMAX) # * self.bins
 
             # Thermal noise
             cth = nr.ctherm(ci.Q,ci.X,lam_0,dl,self.D,ci.TSYS,ci.EMIS)
