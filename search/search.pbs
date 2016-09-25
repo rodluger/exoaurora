@@ -8,8 +8,8 @@ cd ${SEARCH_DIR}
 
 if [ $NODES -eq 1 ]; then
   # Run on a single node with Python multiprocessing
-  python -c "import search; search.Search(line = $LINE)"
+  python search.py -p -l $LINE
 else
   # Run on multiple nodes with MPI
-  mpirun -np $PBS_NP python -c "import search; search.Search(line = $LINE)"
+  mpirun -np $PBS_NP python search.py -p -l $LINE
 fi
