@@ -24,9 +24,9 @@ mpl.rcParams['font.size'] = 20.0
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 mpl.rc('text', usetex=True)
 
-show_plots = False
+show_plots = True
 
-save_plots = False
+save_plots = True
 
 show_contour = True
 
@@ -222,9 +222,10 @@ if show_contour:
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, contrast.T, contour_levels,
                      colors=["black","black", "black", "black", "black"])
-    #plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, manual=manual_locations)
+    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, inline_spacing=20,
+               use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
-    zc = cln.collections; plt.setp(zc, linewidth=2)
+    plt.setp(cln.collections, linewidth=2)
 
     # Colorbar
     cbar = fig.colorbar(cax)
@@ -239,7 +240,7 @@ if show_contour:
     ax.axhline(R_limit,color="orange", ls="--", lw=3,
                label=r"Limiting Resolving Power")
 
-    # Format
+    # Axis Format
     ax.set_ylim(resolver.min(),resolver.max())
     ax.set_xscale("log")
     ax.set_yscale("log")
@@ -248,9 +249,12 @@ if show_contour:
     ax.set_xlabel(r"OI Auroral Power [W]")
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
-    # legend
-    leg=ax.legend(loc=0, fontsize=14)
-    leg.get_frame().set_alpha(0.7)
+    # Legend
+    leg=ax.legend(loc=0, fontsize=15)
+    leg.get_frame().set_alpha(0.0)
+    for text in leg.get_texts():
+        text.set_color("white")
+        text.set_va('center') # va is alias for "verticalalignment"
 
     plt.show()
 
