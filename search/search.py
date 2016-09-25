@@ -665,6 +665,9 @@ def PBSSearch(line = Spectrum.OxygenGreen, nodes = 8, ppn = 16, walltime = 100):
   
   '''
   
+  # Cache the data
+  GetData()
+  
   # Submit the cluster job      
   pbsfile = os.path.join(SEARCH_DIR, 'search.pbs')
   name = '%d' % np.floor(line)
