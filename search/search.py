@@ -645,6 +645,7 @@ class SearchWrap(object):
     planet.stellar_mass = stellar_mass
     planet.mean_longitude = mean_longitude
     res = Compute(planet = planet, **self.kwargs)
+    print(inclination)
     return res['bflx']
 
 def PBSSearch(line = Spectrum.OxygenGreen, nodes = 12, ppn = 12, walltime = 100):
