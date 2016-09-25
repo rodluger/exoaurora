@@ -39,6 +39,10 @@ except ImportError:
     
 # Empirical system offset, see comment below
 SYSTEM_OFFSET = 0.999927
+# Directory this file is in (a bit hacky)
+SEARCH_DIR = os.path.dirname(os.path.realpath('search.py'))
+# Global data var
+DATA = None
 
 class Spectrum(object):
   '''
@@ -172,7 +176,7 @@ def ReadFITS():
   # This is be coded up to allow importing of the UVES dataset as well
   for dataset in ['HARPS']:
     
-    files = glob.glob(os.path.join(os.path.dirname(__file__), dataset, '*.fits'))
+    files = glob.glob(os.path.join(SEARCH_DIR, dataset, '*.fits'))
     for file in files:
 
       # Read the data
@@ -209,7 +213,7 @@ def GetData():
   
   '''
   
-  filename = os.path.join(os.path.dirname(__file__), 'data.npz')
+  filename = os.path.join(SEARCH_DIR, 'data.npz')
   
   if not os.path.exists(filename):
   
@@ -266,7 +270,7 @@ def RemoveStellarLines(wav, flx, weights = None, npc = 5, inds = None):
        
   return flx
 
-def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot = True, 
+def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True, 
             plot_sz = 10, npc = 10, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
             bin_sz = 0.05, mask_star = True, med_mask_sz = 5, fwhm = 0.05,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
@@ -276,20 +280,22 @@ def Compute(planet = ProxCenB(), data = None, line = Spectrum.OxygenGreen, plot 
   
   '''
   
+  # Read the raw data
+  global DATA
+  if DATA is None:
+    DATA = GetData()
+  
   # Check what rest frame we're plotting in
   assert frame in ['star', 'planet', 'earth'], "Argument `frame` must be one of `star`, `planet`, or `earth`."
     
-  # Read the raw data
-  if data is None:
-    data = GetData()
-  jd = data['jd']
-  wav = data['wav']
-  flx = data['flx']
-  err = data['err']
-  earth_rv = data['earth_rv']
-  air = data['air']
-  exp = data['exptime']
-  dataset = data['dataset']
+  jd = DATA['jd']
+  wav = DATA['wav']
+  flx = DATA['flx']
+  err = DATA['err']
+  earth_rv = DATA['earth_rv']
+  air = DATA['air']
+  exp = DATA['exptime']
+  dataset = DATA['dataset']
   total_exp = 0
   
   # Some wavelength-specific params. The noise changes a lot from the UV to the vis,
@@ -644,15 +650,9 @@ class SearchWrap(object):
     planet.period = period
     planet.stellar_mass = stellar_mass
     planet.mean_longitude = mean_longitude
-    
-    #debug
-    np.savez('/usr/lusers/rodluger/src/exoaurora/search/%d_start' % inclination, x = 1.)
-    
+    print("BEGIN: ", params) # DEBUG
     res = Compute(planet = planet, **self.kwargs)
-    
-    #debug
-    np.savez('/usr/lusers/rodluger/src/exoaurora/search/%d_end' % inclination, x = 1.)
-    
+    print("END: ", params) # DEBUG
     return res['bflx']
 
 def PBSSearch(line = Spectrum.OxygenGreen, nodes = 12, ppn = 12, walltime = 100):
@@ -666,12 +666,12 @@ def PBSSearch(line = Spectrum.OxygenGreen, nodes = 12, ppn = 12, walltime = 100)
   '''
   
   # Submit the cluster job      
-  pbsfile = os.path.join(os.path.dirname(__file__), 'search.pbs')
+  pbsfile = os.path.join(SEARCH_DIR, 'search.pbs')
   name = '%d' % np.floor(line)
-  str_n = 'nodes=%d:ppn=%d,feature=%dcore' % (nodes, ppn, ppn)
+  str_n = 'nodes=%d:ppn=%d,feature=%dcore,mem=%dgb' % (nodes, ppn, ppn, 40 * nodes)
   str_w = 'walltime=%d:00:00' % walltime
-  str_v = 'LINE=%.3f,NODES=%d,SEARCH_DIR=%s' % (line, nodes, os.path.dirname(os.path.realpath(sys.argv[0])))
-  str_out = os.path.join(os.path.dirname(__file__), '%s.log' % name)
+  str_v = 'LINE=%.3f,NODES=%d,SEARCH_DIR=%s' % (line, nodes, SEARCH_DIR)
+  str_out = os.path.join(SEARCH_DIR, '%s.log' % name)
   qsub_args = ['qsub', pbsfile, 
                '-v', str_v, 
                '-o', str_out,
@@ -688,26 +688,17 @@ def Search(inclination = np.arange(30., 90., 2.),
            stellar_mass = [0.120], clobber = False, 
            period_ticks = [11.182, 11.184, 11.186, 11.188, 11.190],
            mean_longitude_ticks = [90., 100., 110., 120., 130.],
-           inclination_ticks = [35, 45, 55, 65, 75, 85], pool = None,
-           **kwargs):
+           inclination_ticks = [35, 45, 55, 65, 75, 85], **kwargs):
   '''
   
   '''
   
   # Begin multiprocessing
   with Pool() as pool:
-  
-    # Single or multithreaded?
-    if pool is None:
-      M = map
-    else:
-      M = pool.map
-  
+    
     line = kwargs.get('line', Spectrum.OxygenGreen)
     pref = "%d" % np.floor(line)
-    search_file = os.path.join(os.path.dirname(__file__), '%s_search.npz' % pref)
-    data = GetData()
-    kwargs.update({'data': data})
+    search_file = os.path.join(SEARCH_DIR, '%s_search.npz' % pref)
   
     if clobber or not os.path.exists(search_file):
 
@@ -722,7 +713,7 @@ def Search(inclination = np.arange(30., 90., 2.),
       print("Running grid search...")
       params = list(itertools.product(inclination, period, mean_longitude, stellar_mass))
       sw = SearchWrap(**kwargs)
-      bflx = np.array(list(M(sw, params))).reshape((-1, len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
+      bflx = np.array(list(pool.map(sw, params))).reshape((-1, len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
     
       print("Saving...")
       np.savez(search_file, bins = bins, bflx = bflx, inclination = inclination, period = period,
