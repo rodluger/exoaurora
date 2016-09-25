@@ -698,7 +698,7 @@ def Search(inclination = np.arange(30., 90., 1.),
   line = kwargs.get('line', Spectrum.OxygenGreen)
   pref = "%d" % np.floor(line)
   search_file = os.path.join(SEARCH_DIR, '%s_search.npz' % pref)
-
+  
   if clobber or not os.path.exists(search_file):
 
     # Get the bin array
@@ -716,7 +716,7 @@ def Search(inclination = np.arange(30., 90., 1.),
   
     print("Saving...")
     np.savez(search_file, bins = bins, bflx = bflx, inclination = inclination, period = period,
-             mean_longitude = mean_longitude, stellar_mass = stellar_mass)
+             mean_longitude = mean_longitude, stellar_mass = stellar_mass, params = params)
   else:
     print("Loading saved search...")
     data = np.load(search_file)
@@ -726,6 +726,11 @@ def Search(inclination = np.arange(30., 90., 1.),
     period = data['period']
     mean_longitude = data['mean_longitude']
     stellar_mass = data['stellar_mass']
+    
+    try:
+      params = data['params']
+    except:
+      params = list(itertools.product(inclination, period, mean_longitude, stellar_mass)) # debug
   
   # Here we compute the distribution of the values of the
   # maximum signals at each wavelength (to compute significance later)
@@ -739,12 +744,19 @@ def Search(inclination = np.arange(30., 90., 1.),
 
   # The best-fitting planet params
   planet = ProxCenB()
-  i, p, m, s = np.unravel_index(np.nanargmax(bline), bline.shape)
+  i, p, m, s = params[np.nanargmax(bline)]
   planet.inclination = inclination[i]
   planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
   planet.period = period[p]
   planet.stellar_mass = stellar_mass[s]
   planet.mean_longitude = mean_longitude[m]
+
+  #--- FIGURE 0: Plot the "river plot" for the best solution
+  print("Plotting figure 0...")
+  res = Compute(planet = planet, quiet = True, **kwargs)
+  fig5 = res['fig']
+  fig5.suptitle('Strongest Signal', fontsize = 30, y = 0.95)
+  fig5.savefig('%s_strongest_river.pdf' % pref, bbox_inches = 'tight')
 
   # --- FIGURE 1: Injection test (~8 sigma). This is our nominal detection threshold.
   # Note that we inject 10 angstroms redward of the line we're interested in, so we
@@ -851,13 +863,6 @@ def Search(inclination = np.arange(30., 90., 1.),
                va= 'top', fontsize = 20)
   [tick.label.set_fontsize(16) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
   fig3.savefig('%s_fap.pdf' % pref, bbox_inches = 'tight')
-
-  #--- FIGURE 5: Plot the "river plot" for the best solution
-  print("Plotting figure 5...")
-  res = Compute(planet = planet, quiet = True, **kwargs)
-  fig5 = res['fig']
-  fig5.suptitle('Strongest Signal', fontsize = 30, y = 0.95)
-  fig5.savefig('%s_strongest_river.pdf' % pref, bbox_inches = 'tight')
 
 # Reproduce Figures 2-6 in the paper
 if __name__ == '__main__':
