@@ -644,8 +644,15 @@ class SearchWrap(object):
     planet.period = period
     planet.stellar_mass = stellar_mass
     planet.mean_longitude = mean_longitude
+    
+    #debug
+    np.savez('/usr/lusers/rodluger/src/exoaurora/search/%d_start' % inclination, x = 1.)
+    
     res = Compute(planet = planet, **self.kwargs)
-    print(inclination)
+    
+    #debug
+    np.savez('/usr/lusers/rodluger/src/exoaurora/search/%d_end' % inclination, x = 1.)
+    
     return res['bflx']
 
 def PBSSearch(line = Spectrum.OxygenGreen, nodes = 12, ppn = 12, walltime = 100):
