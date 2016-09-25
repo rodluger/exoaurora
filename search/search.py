@@ -745,11 +745,11 @@ def Search(inclination = np.arange(30., 90., 1.),
   # The best-fitting planet params
   planet = ProxCenB()
   i, p, m, s = params[np.nanargmax(bline)]
-  planet.inclination = inclination[i]
+  planet.inclination = i
   planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
-  planet.period = period[p]
-  planet.stellar_mass = stellar_mass[s]
-  planet.mean_longitude = mean_longitude[m]
+  planet.period = p
+  planet.mean_longitude = m
+  planet.stellar_mass = s
 
   #--- FIGURE 0: Plot the "river plot" for the best solution
   print("Plotting figure 0...")
