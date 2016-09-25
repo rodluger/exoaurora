@@ -666,7 +666,8 @@ def PBSSearch(line = Spectrum.OxygenGreen, nodes = 8, ppn = 16, walltime = 100):
   '''
   
   # Cache the data
-  GetData()
+  if not os.path.exists(os.path.join(SEARCH_DIR, 'data.npz')):
+    GetData()
   
   # Submit the cluster job      
   pbsfile = os.path.join(SEARCH_DIR, 'search.pbs')
@@ -686,8 +687,8 @@ def PBSSearch(line = Spectrum.OxygenGreen, nodes = 8, ppn = 16, walltime = 100):
   subprocess.call(qsub_args)
 
 def Search(inclination = np.arange(30., 90., 2.), 
-           period = [11.186], #np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.002 / 2),
-           mean_longitude = [110.], #np.arange(110. - 3 * 8., 110. + 3 * 8., 8. / 2), 
+           period = [11.186], #np.arange(11.186 - 3 * 0.002, 11.186 + 3 * 0.002, 0.002 / 2), DEBUG
+           mean_longitude = [110.], #np.arange(110. - 3 * 8., 110. + 3 * 8., 8. / 2), DEBUG
            stellar_mass = [0.120], clobber = False, 
            period_ticks = [11.182, 11.184, 11.186, 11.188, 11.190],
            mean_longitude_ticks = [90., 100., 110., 120., 130.],
