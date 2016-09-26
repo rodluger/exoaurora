@@ -8,3 +8,15 @@ and
 ```
 python search.py
 ```
+
+This will likely take a while, since the grid search performs tens of thousands of iterations; we recommend running the script in parallel on a cluster with PBS (some tuning of the script may be required):
+
+```
+python search.py -p
+```
+
+Finally, to run a search on lines other than the 5577.345 Angstrom line, execute
+
+```
+python search.py -l XXXX.XX
+```
