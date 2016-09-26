@@ -344,7 +344,7 @@ class Star(object):
         conv = 1.0e7 * 1.0e-4 * 1.0e-4 # converts to cgs
 
         # Integrate over the band
-        wav = np.linspace(lam_0-delta_lam/2.,lam_0+delta_lam/2.,100)
+        wav = np.linspace(lam_0-delta_lam/2.,lam_0+delta_lam/2.,1000)
         flux = np.trapz(self.spectrum(wav), x=wav)
         return flux * conv * lam_0/(h*c)
 #end class
@@ -583,17 +583,17 @@ class Telescope(object):
             theta = (0.4/1.0e6)/(self.D/2.)*(180./np.pi)*3600.
 
             # Dark noise
-            cd = nr.cdark(ci.DE,ci.X,lam_0,self.D,theta,ci.DNHPIX) # * self.bins
+            cd = nr.cdark(ci.DE,ci.X,lam_0,self.D,theta,ci.DNHPIX) * self.bins
 
             # Read noise
-            cr = nr.cread(ci.RE,ci.X,lam_0,self.D,theta,ci.DNHPIX,ci.DTMAX) # * self.bins
+            cr = nr.cread(ci.RE,ci.X,lam_0,self.D,theta,ci.DNHPIX,ci.DTMAX) * self.bins
 
             # Thermal noise
             cth = nr.ctherm(ci.Q,ci.X,lam_0,dl,self.D,ci.TSYS,ci.EMIS)
 
             # Sum the noise -- factor of 2 from background subtraction
             # from telescope roll (Brown 2005)
-            cn = cp + 2.0*(cz + cez + csp + cd + cr + cth)
+            cn = cp + cref + 2.0*(cz + cez + csp + cd + cr + cth)
 
         # No corongraph, use photon-limit
         else:
