@@ -19,7 +19,7 @@ from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset,
 
 #Typical plot parameters that make for pretty plots
 mpl.rcParams['figure.figsize'] = (10,8)
-mpl.rcParams['font.size'] = 20.0
+mpl.rcParams['font.size'] = 30.0
 
 ## for Palatino and other serif fonts use:
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
@@ -29,11 +29,11 @@ show_spec = False
 
 show_eqw = False
 
-show_contrast_contour = False
+show_contrast_contour = True
 
-show_time_contour = True
+show_time_contour = False
 
-save_plots = False
+save_plots = True
 
 # Init system object with Proxima Centauri defaults
 proxcen = cu.System()
@@ -47,7 +47,7 @@ equivalent_width = np.zeros_like(watts)
 
 # FWHM from Eric
 Temp = 200.0 # K
-FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
+FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
 dl = 50*FWHM
 print("FWHM = "+str(FWHM*1.0e4)+" A")
 
@@ -106,8 +106,8 @@ if show_spec:
     # FWHM from Eric
     vFWHM = 1.0
     Temp = 200.0 # K
-    FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
-    dl = 1.065e6*FWHM # Arbitrary scaling to make plot extend to 1 micron
+    FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
+    dl = 6.33e5*FWHM # Arbitrary scaling to make plot extend to 1 micron
 
     # Auroral power
     apow = 6.5e10
@@ -166,6 +166,7 @@ if show_spec:
     #ax.set_yscale("log")
 
     # Inset axis
+    """
     pad = ew/20
     xmin = lam_0 - ew/2 - pad
     xmax = lam_0 + ew/2 + pad
@@ -184,6 +185,7 @@ if show_spec:
     plt.setp(ax2.get_yticklabels(), fontsize=14, rotation=0)
     mark_inset(ax, ax2, loc1=2, loc2=4, fc="none", ec="black", zorder=0, alpha=0.3)
     #ax2.set_yscale("log")
+    """
 
     fig.tight_layout()
 
@@ -194,12 +196,16 @@ if show_spec:
 
 if show_contrast_contour:
 
+    mpl.rcParams['font.size'] = 28.0
+
+    infig_font_size = 18.0
+
     # Contrast, Resolving power, auroral power grid
     bins = 100
 
     # FWHM from Eric
     Temp = 200.0 # K
-    FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
+    FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
 
     watts = np.logspace(9,15,bins)
     resolver = np.logspace(1,6,bins)
@@ -267,7 +273,8 @@ if show_contrast_contour:
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, contrast.T, contour_levels,
                      colors=["black","black", "black", "black", "black"])
-    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, inline_spacing=20,
+    plt.clabel(cln, inline=1, fontsize=15.5,
+               fmt=fmt, inline_spacing=20,
                use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
     plt.setp(cln.collections, linewidth=2)
@@ -295,7 +302,7 @@ if show_contrast_contour:
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
     # Legend
-    leg=ax.legend(loc=0, fontsize=15)
+    leg=ax.legend(loc=0, fontsize=infig_font_size)
     leg.get_frame().set_alpha(0.0)
     for text in leg.get_texts():
         text.set_color("white")
@@ -308,12 +315,16 @@ if show_contrast_contour:
 
 if show_time_contour:
 
+    mpl.rcParams['font.size'] = 28.0
+
+    infig_font_size = 18.0
+
     # Contrast, Resolving power, auroral power grid
     bins = 100
 
     # FWHM from Eric
     Temp = 200.0 # K
-    FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
+    FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
 
     # Define a desired signal-to-noise
     SN = 6.0
@@ -398,6 +409,7 @@ if show_time_contour:
 
     # Contour Lines
     contour_levels = np.array([1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3])
+    inline = 0
     # Automate "manual locations" for contour labels
     #ia = (np.abs(watts-6.5e14)).argmin() # A. Power index
     #ic = [np.abs(contrast[ia, :] - clvl).argmin() for clvl in contour_levels]
@@ -406,8 +418,8 @@ if show_time_contour:
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, exptime.T, contour_levels,
                      colors="black")
-    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, inline_spacing=5,
-               use_clabeltext=True)#, manual=manual_locations)
+    #plt.clabel(cln, inline=inline, fontsize=infig_font_size, fmt=fmt, inline_spacing=1,
+    #           use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
     plt.setp(cln.collections, linewidth=2)
 
@@ -434,7 +446,7 @@ if show_time_contour:
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
     # Legend
-    leg=ax.legend(loc=0, fontsize=15)
+    leg=ax.legend(loc=0, fontsize=infig_font_size)
     leg.get_frame().set_alpha(0.0)
     for text in leg.get_texts():
         text.set_color("white")
