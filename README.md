@@ -21,6 +21,4 @@ I cremated Sam McGee.<br>
 
 <br>
 
-# A search for the oxygen auroral line on Proxima Centauri b
-
-Here you will find the Python scripts used to generate the figures in Luger et al. (2016), as well as general utilities for predicting/observing exo-aurorae. Check out the [signal](signal/), [detectability](detectability/), and [search](search/) sections.
+Here you will find the Python scripts used to generate the figures in [Luger et al. (2016)](), as well as general utilities for predicting/observing exo-aurorae. Check out the [signal](signal/), [detectability](detectability/), and [search](search/) sections.
