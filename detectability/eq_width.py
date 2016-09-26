@@ -25,15 +25,15 @@ mpl.rcParams['font.size'] = 20.0
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 mpl.rc('text', usetex=True)
 
-show_spec = True
+show_spec = False
 
 show_eqw = False
 
 show_contrast_contour = False
 
-show_time_contour = False
+show_time_contour = True
 
-save_plots = True
+save_plots = False
 
 # Init system object with Proxima Centauri defaults
 proxcen = cu.System()
