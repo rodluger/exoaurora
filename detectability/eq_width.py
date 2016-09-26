@@ -33,7 +33,7 @@ show_contrast_contour = False
 
 show_time_contour = True
 
-save_plots = False
+save_plots = True
 
 # Init system object with Proxima Centauri defaults
 proxcen = cu.System()
@@ -398,6 +398,7 @@ if show_time_contour:
 
     # Contour Lines
     contour_levels = np.array([1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3])
+    inline = 0
     # Automate "manual locations" for contour labels
     #ia = (np.abs(watts-6.5e14)).argmin() # A. Power index
     #ic = [np.abs(contrast[ia, :] - clvl).argmin() for clvl in contour_levels]
@@ -406,8 +407,8 @@ if show_time_contour:
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, exptime.T, contour_levels,
                      colors="black")
-    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, inline_spacing=5,
-               use_clabeltext=True)#, manual=manual_locations)
+    #plt.clabel(cln, inline=inline, fontsize=15, fmt=fmt, inline_spacing=1,
+    #           use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
     plt.setp(cln.collections, linewidth=2)
 
