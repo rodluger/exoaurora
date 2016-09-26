@@ -10,7 +10,7 @@ Searching the HARPS data for the OI emission signal.
 
 from __future__ import division, print_function, absolute_import, unicode_literals
 from pool import Pool
-import matplotlib as mpl; mpl.use('Agg')
+import matplotlib as mpl # debug; mpl.use('Agg')
 mpl.rcParams['font.family'] = ['serif']
 mpl.rcParams['font.serif'] = ['Times New Roman']
 from kepler import RadialVelocity
@@ -37,7 +37,8 @@ except ImportError:
   except ImportError:
     raise Exception('Please install the `pyfits` package.')
     
-# Empirical system offset, see comment below
+# Empirical system offset based on the Na D lines and Ca II K lines.
+# Accurate to within 0.01 Angstroms.
 SYSTEM_OFFSET = 0.999927
 # Directory this file is in (a bit hacky)
 SEARCH_DIR = os.path.dirname(os.path.realpath('search.py'))
@@ -50,7 +51,8 @@ class Spectrum(object):
   
   '''
   
-  NitrogenUVI = 3914.
+  CaIIK = 3933.66            # Stellar diagnostic line
+  NitrogenUVI = 3914.4
   NitrogenUVII = 4278.
   NitrogenUVIII = 4709.
   NitrogenBlueI = 5199.
@@ -59,14 +61,15 @@ class Spectrum(object):
   OxygenRedI = 6300.308 
   OxygenRedII = 6363.790
   HAlpha = 6562.8
-  MysteryLineI = 5515.46 # Prominent in the star, not sure what it is
+  MysteryLineI = 5515.46      # Prominent in the star, not sure what it is
   SodiumDI = 5889.950
   SodiumDII = 5895.924
-  HeliumYellow = 5875.6 # Activity tracer?
-  MysteryLineII = 5540.07 # Prominent in both star and earth... Weird!
+  HeliumYellow = 5875.6       # Activity tracer?
+  MysteryLineII = 5540.07     # Prominent in both star and earth... Weird!
+  InjectionTest = 5567.345    # 10A blueward of OxygenGreen, for injection tests
   
-  EarthLines = [MysteryLineII, NitrogenUVI, OxygenGreen, OxygenRedI, OxygenRedII]
-  StarLines = [MysteryLineII, OxygenGreen, MysteryLineI, SodiumDI, SodiumDII, HeliumYellow]
+  EarthLines = [MysteryLineII, InjectionTest, NitrogenUVI, OxygenGreen, OxygenRedI, OxygenRedII]
+  StarLines = [MysteryLineII, InjectionTest, OxygenGreen, MysteryLineI, SodiumDII, HeliumYellow]
 
 class Planet(object):
   '''
@@ -272,7 +275,7 @@ def RemoveStellarLines(wav, flx, weights = None, npc = 5, inds = None):
 
 def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True, 
             plot_sz = 10, npc = 10, frame = 'planet', wpca_sz = 250, wpca_mask_sz = 0.2, 
-            bin_sz = 0.05, mask_star = True, med_mask_sz = 5, fwhm = 0.05,
+            mask_star = True, med_mask_sz = 5, fwhm = 0.05,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
             crop_outliers = True, clobber = False, quiet = False, spectrum_filter = 'True', 
             max_frac_noise = 3, filter_sz = 1.):
@@ -310,14 +313,14 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
     wpca_weights = 'std'
   else:
     spec_amp = 0.01
-    stack_lims = [(0.9840, 1.0160), (0.9960, 1.0100)]
+    stack_lims = [(0.99, 1.02), (0.99, 1.02)]
     wpca_weights = 'exptime'
   
   # Crop to a smaller window centered on the line
   inds = np.where((wav >= line - wpca_sz / 2.) & (wav <= line + wpca_sz / 2.))[0]
   wav = wav[inds]
   flx = flx[:,inds]
-
+  
   # Inject a signal for injection/recovery tests?
   if inject_contrast > 0.:
     if not quiet: print("Injecting signal...")
@@ -328,9 +331,13 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
       inds = np.where(np.abs(wav - x) <= fwhm / 2.)[0]
       # Compute the flux in the stellar spectrum at those indices
       z = np.trapz(flx[i][inds], wav[inds])
-      # Compute the line profile. The amplitude is contrast * z
-      flx[i] += GaussianLine(wav, line = x, fwhm = fwhm, A = inject_contrast * z)
-
+      # Compute the flux in the line at those indices, and normalize
+      # to the correct contrast
+      phi = GaussianLine(wav, line = x, fwhm = fwhm)
+      phi /= np.trapz(phi[inds], wav[inds])
+      phi *= inject_contrast * z
+      flx[i] += phi
+  
   # Get masks in the stellar frame
   if not quiet: print("Applying masks...")
   weights = np.ones((len(wav), len(flx)))
@@ -372,7 +379,8 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
     if not quiet: print("Removing stellar features...")
     flx = RemoveStellarLines(wav, flx, weights = weights, npc = npc, inds = None)
 
-  # Remove earth features
+  # Remove earth features (not great; flux isn't really correlated with airmass,
+  # except at the telluric 5577 feature)
   if airmass_correction:
     if not quiet: print("Applying airmass correction...")
   
@@ -488,7 +496,6 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
       for e in earth[i]:
         if len(e):
           y0[e] = np.nanmedian(y0[np.where(np.abs(x - wav[e][0]) < med_mask_sz)])
-      
       for s in star[i]:
         if len(s):
           y0[s] = np.nanmedian(y0[np.where(np.abs(x - wav[s][0]) < med_mask_sz)])
@@ -540,11 +547,11 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
     ax[1].plot(xstack, z, 'k-', alpha = 0.75)
   
   # Get the stacked, binned flux
-  bin_centers = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
+  bin_centers = np.append(np.arange(line, line - wpca_sz / 2., -fwhm)[::-1], np.arange(line, line + wpca_sz / 2., fwhm)[1:])
   bflx = np.zeros_like(bin_centers)
   bnrm = np.zeros_like(bin_centers)
   for x, z in zip(xstack, fstack / np.nanmedian(fstack)):
-    if (x >= bin_centers[0] - bin_sz / 2.) and (x < bin_centers[-1] + bin_sz / 2.):
+    if (x >= bin_centers[0] - fwhm / 2.) and (x < bin_centers[-1] + fwhm / 2.):
       i = np.argmin(np.abs(bin_centers - x))
       bflx[i] += z
       bnrm[i] += 1
@@ -581,7 +588,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
   # The binned flux
   if plot:
     ax[2].plot(bin_centers, bflx, 'k.', alpha = 0.1)
-    ax[2].bar(bin_centers - bin_sz / 2., bflx, color = 'None', width = bin_sz)
+    ax[2].bar(bin_centers - fwhm / 2., bflx, color = 'None', width = fwhm)
     ax[2].axhline(1., color = 'r', ls = '--', alpha = 0.5)
     lo, hi = np.min(bflx), np.max(bflx)
     rng = hi - lo
@@ -707,8 +714,8 @@ def Search(inclination = np.arange(30., 90., 1.),
 
     # Get the bin array
     wpca_sz = kwargs.get('wpca_sz', 250)
-    bin_sz = kwargs.get('bin_sz', 0.05)
-    bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
+    fwhm = kwargs.get('fwhm', 0.05)
+    bins = np.append(np.arange(line, line - wpca_sz / 2., -fwhm)[::-1], np.arange(line, line + wpca_sz / 2., fwhm)[1:])
     pad = int(0.05 * len(bins))
     bins = bins[pad:-pad]
     
@@ -749,36 +756,36 @@ def Search(inclination = np.arange(30., 90., 1.),
 
   # The best-fitting planet params
   planet = ProxCenB()
-  i, p, m, s = params[np.nanargmax(bline)]
-  planet.inclination = i
+  ibest, pbest, mbest, sbest = params[np.nanargmax(bline)]
+  planet.inclination = ibest
   planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
-  planet.period = p
-  planet.mean_longitude = m
-  planet.stellar_mass = s
+  planet.period = pbest
+  planet.mean_longitude = mbest
+  planet.stellar_mass = sbest
 
-  #--- FIGURE 0: Plot the "river plot" for the best solution
-  print("Plotting figure 0...")
-  res = Compute(planet = planet, quiet = True, **kwargs)
-  fig5 = res['fig']
-  fig5.suptitle('Strongest Signal', fontsize = 30, y = 0.95)
-  fig5.savefig('%s_strongest_river.pdf' % pref, bbox_inches = 'tight')
-
-  # --- FIGURE 1: Injection test (~8 sigma). This is our nominal detection threshold.
+  # --- FIGURE: Injection test (~8 sigma). This is our nominal detection threshold.
   # Note that we inject 10 angstroms redward of the line we're interested in, so we
   # don't stack an injected signal on top of an actual signal. Note also that we 
   # purposefully inject assuming the same planet params as those of the peak signal,
   # so that the number of spectra and the noise properties are the same.
-  print("Plotting figure 1...")
+  print("Plotting injection test...")
   inj_kwargs = dict(kwargs)
   inj_kwargs.update({'line': line - 10., 'quiet': True})
-  res = Compute(inject_contrast = 2e-2, inject_planet = planet, planet = planet, **inj_kwargs)
+  res = Compute(inject_contrast = 1.8e-2, inject_planet = planet, planet = planet, **inj_kwargs)
   fig1 = res['fig']
   inj_sig = (res['signal'] - bmu) / bstd
   fig1.suptitle('%d$\sigma$ Injected Signal' % inj_sig, fontsize = 30, y = 0.95)
   fig1.savefig('%s_injection_river.pdf' % pref, bbox_inches = 'tight')
   
-  # --- FIGURE 2: Triangle plot
-  print("Plotting figure 2...")
+  #--- FIGURE: Plot the "river plot" for the best solution
+  print("Plotting river plot...")
+  res = Compute(planet = planet, quiet = True, **kwargs)
+  fig5 = res['fig']
+  fig5.suptitle('Strongest Signal', fontsize = 30, y = 0.95)
+  fig5.savefig('%s_strongest_river.pdf' % pref, bbox_inches = 'tight')
+
+  # --- FIGURE: Triangle plot
+  print("Plotting triangle plot...")
   fig2, ax2 = pl.subplots(3,3)
   fig2.subplots_adjust(wspace = 0.08, hspace = 0.1, top = 0.975, bottom = 0.15)
   # The marginalized distributions
@@ -794,6 +801,19 @@ def Search(inclination = np.arange(30., 90., 1.),
   ax2[1,0].imshow(np.max(bline, axis = (2,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(period), np.max(period)), cmap = pl.get_cmap('Greys'), origin = 'lower')
   ax2[2,0].imshow(np.max(bline, axis = (1,3)).T, aspect = 'auto', extent = (np.min(inclination), np.max(inclination), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'), origin = 'lower')
   ax2[2,1].imshow(np.max(bline, axis = (0,3)).T, aspect = 'auto', extent = (np.min(period), np.max(period), np.min(mean_longitude), np.max(mean_longitude)), cmap = pl.get_cmap('Greys'), origin = 'lower')
+  # Indicate the maximum
+  ax2[0,0].axvline(ibest, color = 'r', alpha = 0.5)
+  ax2[1,1].axvline(pbest, color = 'r', alpha = 0.5)
+  ax2[2,2].axvline(mbest, color = 'r', alpha = 0.5)
+  ax2[1,0].axvline(ibest, color = 'r', alpha = 0.5)
+  ax2[1,0].axhline(pbest, color = 'r', alpha = 0.5)
+  ax2[1,0].plot(ibest, pbest, "s", color='#bb2222', markeredgecolor = 'none')
+  ax2[2,0].axvline(ibest, color = 'r', alpha = 0.5)
+  ax2[2,0].axhline(mbest, color = 'r', alpha = 0.5)
+  ax2[2,0].plot(ibest, mbest, "s", color='#bb2222', markeredgecolor = 'none')
+  ax2[2,1].axvline(pbest, color = 'r', alpha = 0.5)
+  ax2[2,1].axhline(mbest, color = 'r', alpha = 0.5)
+  ax2[2,1].plot(pbest, mbest, "s", color='#bb2222', markeredgecolor = 'none')
   # Tweak the appearance
   for axis in ax2.flatten():
     axis.margins(0,0)
@@ -816,8 +836,11 @@ def Search(inclination = np.arange(30., 90., 1.),
     axis.set_ylim(ymin, ymax)
     axis.margins(0, None)
   ax2[0,0].set_xticks(inclination_ticks)
+  ax2[0,0].yaxis.set_major_locator(MaxNLocator(nbins = 5))
   ax2[1,1].set_xticks(period_ticks)
+  ax2[1,1].yaxis.set_major_locator(MaxNLocator(nbins = 5))
   ax2[2,2].set_xticks(mean_longitude_ticks)
+  ax2[2,2].yaxis.set_major_locator(MaxNLocator(nbins = 5))
   ax2[1,0].set_xticks(inclination_ticks)
   ax2[1,0].set_yticks(period_ticks)
   ax2[2,0].set_xticks(inclination_ticks)
@@ -831,8 +854,8 @@ def Search(inclination = np.arange(30., 90., 1.),
   ax2[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 18)
   fig2.savefig('%s_triangle.pdf' % pref, bbox_inches = 'tight')
 
-  #--- FIGURE 3: Plot bmax versus wavelength
-  print("Plotting figure 3...")
+  #--- FIGURE: Plot bmax versus wavelength
+  print("Plotting signal vs wavelength...")
   fig4, ax4 = pl.subplots(1, figsize = (12,4))
   ax4.plot(bins, bmax - 1., 'k-', lw = 0.5, zorder = -2)
   ax4.plot(line, blinemax - 1., 'ro', markeredgecolor = 'none')
@@ -843,9 +866,9 @@ def Search(inclination = np.arange(30., 90., 1.),
   ax4.set_ylabel('Fractional Signal', fontsize = 28)
   [tick.label.set_fontsize(22) for tick in ax4.xaxis.get_major_ticks() + ax4.yaxis.get_major_ticks()]
   fig4.savefig('%s_max_signal_vs_wavelength.pdf' % pref, bbox_inches = 'tight') 
-
-  # --- FIGURE 4: The distribution of signal maxima at each wavelength (this gives us the FAP)
-  print("Plotting figure 4...")
+  
+  # --- FIGURE: The distribution of signal maxima at each wavelength (this gives us the FAP)
+  print("Plotting signal distribution...")
   fig3, ax3 = pl.subplots(1)
   nb = len(np.where(bmax >= blinemax)[0])
   fap = nb / len(bmax)
@@ -861,9 +884,12 @@ def Search(inclination = np.arange(30., 90., 1.),
     d -= 1
   ax3.axvline(b[d] - 0.5 * (b[1] - b[0]), color = 'r', ls = '--')
   ax3.margins(0.1, None)
-  ax3.set_ylabel(r'Number of signals', fontsize = 22)
-  ax3.set_xlabel(r'Fractional strength', fontsize = 22)
-  ax3.annotate(fap_str, xy = (0.975, 0.95), 
+  ax3.set_ylabel(r'Number of Signals', fontsize = 22)
+  ax3.set_xlabel(r'Fractional Signal', fontsize = 22)
+  ax3.annotate(r'$\mathrm{Significance} = %.1f\sigma$' % ((blinemax - bmu) / bstd),
+               xy = (0.975, 0.95), xycoords = 'axes fraction', ha = 'right', 
+               va= 'top', fontsize = 20)
+  ax3.annotate(fap_str, xy = (0.975, 0.88), 
                xycoords = 'axes fraction', ha = 'right', 
                va= 'top', fontsize = 20)
   [tick.label.set_fontsize(16) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
@@ -871,6 +897,16 @@ def Search(inclination = np.arange(30., 90., 1.),
 
 # Reproduce Figures 2-6 in the paper
 if __name__ == '__main__':
+  '''
+  Usage: search.py [-h] [-p] [-l LINE]
+
+  optional arguments:
+    -h, --help            Show this help message and exit.
+    -p, --pbs             Run in parallel on a cluster with PBS.
+    -l LINE, --line LINE  Line wavelength (angstroms). Default 5577.345.
+  
+  '''
+  
   with Pool() as pool:
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--pbs", action = 'store_true', help = 'Run on a PBS cluster')
