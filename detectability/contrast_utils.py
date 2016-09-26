@@ -431,7 +431,7 @@ class Telescope(object):
     """
     Telescope class for spectrograph observing.
     """
-    def __init__(self,D=10.0,eps=0.05,R=115000,bins=2):
+    def __init__(self,D=10.0,eps=0.05,R=115000,bins=1):
         self.D = D # Telescope diameter in m
         self.eps = eps # Net telescope efficiency (throughput)
         self.R = R # Resolving Power (lambda/delta_lambda)
