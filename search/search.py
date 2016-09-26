@@ -275,7 +275,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
             bin_sz = 0.05, mask_star = True, med_mask_sz = 5, fwhm = 0.05,
             inject_contrast = 0, inject_planet = ProxCenB(), airmass_correction = False,
             crop_outliers = True, clobber = False, quiet = False, spectrum_filter = 'True', 
-            max_frac_noise = 3, wpca_weights = 'exptime', filter_sz = 1.):
+            max_frac_noise = 3, filter_sz = 1.):
   '''
   
   '''
@@ -299,16 +299,19 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
   total_exp = 0
   
   # Some wavelength-specific params. The noise changes a lot from the UV to the vis,
-  # so we need to change our plotting scale.
+  # so we need to change our plotting scale and the method we use to weight the spectra
   if line < 4000:
     spec_amp = 0.001
     stack_lims = [(0.6, 1.4), (0.8, 1.2)]
+    wpca_weights = 'std'
   elif line < 4500:
     spec_amp = 0.0025
     stack_lims = [(0.9, 1.1), (0.95, 1.05)]
+    wpca_weights = 'std'
   else:
     spec_amp = 0.01
     stack_lims = [(0.9840, 1.0160), (0.9960, 1.0100)]
+    wpca_weights = 'exptime'
   
   # Crop to a smaller window centered on the line
   inds = np.where((wav >= line - wpca_sz / 2.) & (wav <= line + wpca_sz / 2.))[0]
