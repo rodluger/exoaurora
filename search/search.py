@@ -630,20 +630,21 @@ class SearchWrap(object):
   
   '''
   
-  def __init__(self, **kwargs):
+  def __init__(self, params, **kwargs):
     '''
     
     '''
     
     self.kwargs = kwargs
     self.kwargs.update({'quiet': True, 'plot': False})
+    self.params = params
   
-  def __call__(self, params):
+  def __call__(self, i):
     '''
     
     '''
     
-    inclination, period, stellar_mass, mean_longitude = params
+    inclination, period, mean_longitude, stellar_mass = self.params[i]
     planet = ProxCenB()
     planet.inclination = inclination
     planet.mass = 1.27 / np.sin(planet.inclination * np.pi / 180)
@@ -651,7 +652,7 @@ class SearchWrap(object):
     planet.stellar_mass = stellar_mass
     planet.mean_longitude = mean_longitude
     res = Compute(planet = planet, **self.kwargs)
-    return res['bflx']
+    return (i, res['bflx'])
 
 def PBSSearch(line = Spectrum.OxygenGreen, nodes = 8, ppn = 16, walltime = 100):
   '''
@@ -707,13 +708,18 @@ def Search(inclination = np.arange(30., 90., 1.),
     bins = np.append(np.arange(line, line - wpca_sz / 2., -bin_sz)[::-1], np.arange(line, line + wpca_sz / 2., bin_sz)[1:])
     pad = int(0.05 * len(bins))
     bins = bins[pad:-pad]
-
+    
     # Loop over planet params
     print("Running grid search...")
     params = list(itertools.product(inclination, period, mean_longitude, stellar_mass))
-    sw = SearchWrap(**kwargs)
-    bflx = np.array(list(fmap(sw, params))).reshape((-1, len(inclination), len(period), len(mean_longitude), len(stellar_mass)))
-  
+    sw = SearchWrap(params, **kwargs)
+    res = list(fmap(sw, range(len(params))))
+    bflx = np.zeros((len(params), len(bins)))
+    for i, b in res:
+      bflx[i] = b
+    bflx = bflx.reshape(len(inclination), len(period), len(mean_longitude), len(stellar_mass), -1)
+    bflx = np.rollaxis(bflx, 4)
+    
     print("Saving...")
     np.savez(search_file, bins = bins, bflx = bflx, inclination = inclination, period = period,
              mean_longitude = mean_longitude, stellar_mass = stellar_mass, params = params)
@@ -726,11 +732,7 @@ def Search(inclination = np.arange(30., 90., 1.),
     period = data['period']
     mean_longitude = data['mean_longitude']
     stellar_mass = data['stellar_mass']
-    
-    try:
-      params = data['params']
-    except:
-      params = list(itertools.product(inclination, period, mean_longitude, stellar_mass)) # debug
+    params = data['params']
   
   # Here we compute the distribution of the values of the
   # maximum signals at each wavelength (to compute significance later)
@@ -771,7 +773,7 @@ def Search(inclination = np.arange(30., 90., 1.),
   inj_sig = (res['signal'] - bmu) / bstd
   fig1.suptitle('%d$\sigma$ Injected Signal' % inj_sig, fontsize = 30, y = 0.95)
   fig1.savefig('%s_injection_river.pdf' % pref, bbox_inches = 'tight')
-
+  
   # --- FIGURE 2: Triangle plot
   print("Plotting figure 2...")
   fig2, ax2 = pl.subplots(3,3)
