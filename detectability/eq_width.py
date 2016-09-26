@@ -29,11 +29,11 @@ show_spec = False
 
 show_eqw = False
 
-show_contrast_contour = False
+show_contrast_contour = True
 
-show_time_contour = True
+show_time_contour = False
 
-save_plots = False
+save_plots = True
 
 # Init system object with Proxima Centauri defaults
 proxcen = cu.System()
@@ -274,7 +274,7 @@ if show_contrast_contour:
 
     # Plot limiting resolving power
     ax.axhline(R_limit,color="orange", ls="--", lw=3,
-               label=r"Limiting Resolving Power")
+               label=r"FWHM Resolving Power ($\lambda / FWHM$)")
 
     # Axis Format
     ax.set_ylim(resolver.min(),resolver.max())
