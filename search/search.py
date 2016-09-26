@@ -10,7 +10,7 @@ Searching the HARPS data for the OI emission signal.
 
 from __future__ import division, print_function, absolute_import, unicode_literals
 from pool import Pool
-import matplotlib as mpl # debug; mpl.use('Agg')
+import matplotlib as mpl; mpl.use('Agg')
 mpl.rcParams['font.family'] = ['serif']
 mpl.rcParams['font.serif'] = ['Times New Roman']
 from kepler import RadialVelocity
@@ -315,7 +315,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
     spec_amp = 0.01
     stack_lims = [(0.99, 1.02), (0.99, 1.02)]
     wpca_weights = 'exptime'
-  
+    
   # Crop to a smaller window centered on the line
   inds = np.where((wav >= line - wpca_sz / 2.) & (wav <= line + wpca_sz / 2.))[0]
   wav = wav[inds]
@@ -461,7 +461,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
     # User-defined filter
     if not eval(spectrum_filter):
       continue
-    
+
     # Compute the planet mask in the stellar frame. If the planet is moving away
     # from us (redshifted), we REDSHIFT the line accordingly.
     x = ApplyDopplerFactor(line, pdf[i])
@@ -478,7 +478,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
       # Is the spectrum too noisy?
       if np.std(y0 / np.nanmedian(y0)) > max_frac_noise:
         continue
-           
+      
       # DOPPLER SHIFTING SANITY CHECK:
       #
       #   if (planet.phase(jd[i]) < 0.22) and (planet.phase(jd[i]) > 0.18):
@@ -743,7 +743,7 @@ def Search(inclination = np.arange(30., 90., 1.),
     mean_longitude = data['mean_longitude']
     stellar_mass = data['stellar_mass']
     params = data['params']
-  
+    
   # Here we compute the distribution of the values of the
   # maximum signals at each wavelength (to compute significance later)
   bmax = np.max(bflx, axis = (1,2,3,4))
