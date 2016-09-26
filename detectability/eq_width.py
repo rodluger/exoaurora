@@ -25,15 +25,15 @@ mpl.rcParams['font.size'] = 20.0
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 mpl.rc('text', usetex=True)
 
-show_spec = True
+show_spec = False
 
 show_eqw = False
 
 show_contrast_contour = False
 
-show_time_contour = False
+show_time_contour = True
 
-save_plots = True
+save_plots = False
 
 # Init system object with Proxima Centauri defaults
 proxcen = cu.System()
@@ -171,7 +171,7 @@ if show_spec:
                     where=((wave_hires[mask2] < lam_0 + ew/2) & (wave_hires[mask2] > lam_0 - ew/2.)),
                     facecolor='green', alpha = 0.2)
     ax2.set_xlim((xmin*1.0e4, xmax*1.0e4))
-    xticks = [xmin*1.0e4, lam_0*1.0e4, xmax*1.0e4]
+    #xticks = [xmin*1.0e4, lam_0*1.0e4, xmax*1.0e4]
     xticks = np.linspace(xmin*1.0e4, xmax*1.0e4, 5)
     ax2.set_xticks(xticks)
     ax2.set_xticklabels(["%.2f" % x for x in xticks])
@@ -185,7 +185,7 @@ if show_spec:
     plt.show()
 
     if save_plots:
-        fig.savefig("OI_ref_spec.pdf")
+        fig.savefig("OI_ref_spec.pdf", bbox_inches='tight')
 
 if show_contrast_contour:
 
@@ -295,7 +295,7 @@ if show_contrast_contour:
     plt.show()
 
     if save_plots:
-        fig.savefig("contrast_vs_R_vs_watts.pdf")
+        fig.savefig("contrast_vs_R_vs_watts.pdf", bbox_inches='tight')
 
 if show_time_contour:
 
@@ -430,4 +430,4 @@ if show_time_contour:
     plt.show()
 
     if save_plots:
-        fig.savefig("exptime_vs_R_vs_watts.pdf")
+        fig.savefig("exptime_vs_R_vs_watts.pdf", bbox_inches='tight')
