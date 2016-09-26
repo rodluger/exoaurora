@@ -1,3 +1,6 @@
+<h1 align="center">
+exoaurora
+</h1>
 <p align="center">
   <a href="http://arxiv.org/abs/1609.XXXXX"><img src="https://img.shields.io/badge/arXiv-1609.XXXXX-brightgreen.svg?style=flat"/></a>
   <a href="http://dx.doi.org/XXXXX"><img src="https://img.shields.io/badge/DOI-XXXXX-brightgreen.svg?style=flat"></a>
