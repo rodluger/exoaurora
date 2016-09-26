@@ -51,7 +51,8 @@ luvoir = cu.Telescope(D=16.)
 # HabEX-concept space-based telescope
 habex = cu.Telescope(D=6.5)
 
-# Define a desired signal-to-noise
+# Define a desired signal-to-noise to resolve auroral emission line
+# above the continuum
 SN = 6.0
 
 #################################################
