@@ -25,13 +25,13 @@ mpl.rcParams['font.size'] = 20.0
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 mpl.rc('text', usetex=True)
 
-show_spec = False
+show_spec = True
 
 show_eqw = False
 
 show_contrast_contour = False
 
-show_time_contour = True
+show_time_contour = False
 
 save_plots = True
 
@@ -47,7 +47,7 @@ equivalent_width = np.zeros_like(watts)
 
 # FWHM from Eric
 Temp = 200.0 # K
-FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
+FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
 dl = 50*FWHM
 print("FWHM = "+str(FWHM*1.0e4)+" A")
 
@@ -106,8 +106,8 @@ if show_spec:
     # FWHM from Eric
     vFWHM = 1.0
     Temp = 200.0 # K
-    FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
-    dl = 1.065e6*FWHM # Arbitrary scaling to make plot extend to 1 micron
+    FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
+    dl = 1.065e6*FWHM/2 # Arbitrary scaling to make plot extend to 1 micron
 
     # Auroral power
     apow = 6.5e10
@@ -199,7 +199,7 @@ if show_contrast_contour:
 
     # FWHM from Eric
     Temp = 200.0 # K
-    FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
+    FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
 
     watts = np.logspace(9,15,bins)
     resolver = np.logspace(1,6,bins)
@@ -313,7 +313,7 @@ if show_time_contour:
 
     # FWHM from Eric
     Temp = 200.0 # K
-    FWHM = 0.0186*1.0e-4 * np.power(Temp / 1e3, 0.5)
+    FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
 
     # Define a desired signal-to-noise
     SN = 6.0
