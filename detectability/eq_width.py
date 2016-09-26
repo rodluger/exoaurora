@@ -19,17 +19,17 @@ from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset,
 
 #Typical plot parameters that make for pretty plots
 mpl.rcParams['figure.figsize'] = (10,8)
-mpl.rcParams['font.size'] = 20.0
+mpl.rcParams['font.size'] = 30.0
 
 ## for Palatino and other serif fonts use:
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 mpl.rc('text', usetex=True)
 
-show_spec = True
+show_spec = False
 
 show_eqw = False
 
-show_contrast_contour = False
+show_contrast_contour = True
 
 show_time_contour = False
 
@@ -107,7 +107,7 @@ if show_spec:
     vFWHM = 1.0
     Temp = 200.0 # K
     FWHM = 0.014*1.0e-4 * np.power(Temp / 200, 0.5)
-    dl = 1.065e6*FWHM/2 # Arbitrary scaling to make plot extend to 1 micron
+    dl = 6.33e5*FWHM # Arbitrary scaling to make plot extend to 1 micron
 
     # Auroral power
     apow = 6.5e10
@@ -166,6 +166,7 @@ if show_spec:
     #ax.set_yscale("log")
 
     # Inset axis
+    """
     pad = ew/20
     xmin = lam_0 - ew/2 - pad
     xmax = lam_0 + ew/2 + pad
@@ -184,6 +185,7 @@ if show_spec:
     plt.setp(ax2.get_yticklabels(), fontsize=14, rotation=0)
     mark_inset(ax, ax2, loc1=2, loc2=4, fc="none", ec="black", zorder=0, alpha=0.3)
     #ax2.set_yscale("log")
+    """
 
     fig.tight_layout()
 
@@ -193,6 +195,10 @@ if show_spec:
         fig.savefig("OI_ref_spec.pdf", bbox_inches='tight')
 
 if show_contrast_contour:
+
+    mpl.rcParams['font.size'] = 28.0
+
+    infig_font_size = 18.0
 
     # Contrast, Resolving power, auroral power grid
     bins = 100
@@ -267,7 +273,8 @@ if show_contrast_contour:
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, contrast.T, contour_levels,
                      colors=["black","black", "black", "black", "black"])
-    plt.clabel(cln, inline=1, fontsize=15, fmt=fmt, inline_spacing=20,
+    plt.clabel(cln, inline=1, fontsize=15.5,
+               fmt=fmt, inline_spacing=20,
                use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
     plt.setp(cln.collections, linewidth=2)
@@ -295,7 +302,7 @@ if show_contrast_contour:
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
     # Legend
-    leg=ax.legend(loc=0, fontsize=15)
+    leg=ax.legend(loc=0, fontsize=infig_font_size)
     leg.get_frame().set_alpha(0.0)
     for text in leg.get_texts():
         text.set_color("white")
@@ -307,6 +314,10 @@ if show_contrast_contour:
         fig.savefig("contrast_vs_R_vs_watts.pdf", bbox_inches='tight')
 
 if show_time_contour:
+
+    mpl.rcParams['font.size'] = 28.0
+
+    infig_font_size = 18.0
 
     # Contrast, Resolving power, auroral power grid
     bins = 100
@@ -407,7 +418,7 @@ if show_time_contour:
     fmt = ticker.LogFormatterMathtext()
     cln = ax.contour(watts, resolver, exptime.T, contour_levels,
                      colors="black")
-    #plt.clabel(cln, inline=inline, fontsize=15, fmt=fmt, inline_spacing=1,
+    #plt.clabel(cln, inline=inline, fontsize=infig_font_size, fmt=fmt, inline_spacing=1,
     #           use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
     plt.setp(cln.collections, linewidth=2)
@@ -435,7 +446,7 @@ if show_time_contour:
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
     # Legend
-    leg=ax.legend(loc=0, fontsize=15)
+    leg=ax.legend(loc=0, fontsize=infig_font_size)
     leg.get_frame().set_alpha(0.0)
     for text in leg.get_texts():
         text.set_color("white")
