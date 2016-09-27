@@ -895,25 +895,107 @@ def Search(inclination = np.arange(30., 90., 1.),
   [tick.label.set_fontsize(16) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
   fig3.savefig('%s_fap.pdf' % pref, bbox_inches = 'tight')
 
-# Reproduce Figures 2-6 in the paper
+def DeltaLambdaOrbit(int_hours, phase = 'quad', res = 100):
+  '''
+  
+  Calculates the broadening of the line due to a finite exposure centered
+  at a certain phase.
+  
+  phase of 0 is new (transit)
+  phase of 90 is quadrature I
+  phase of 180 is full (occultation)
+  phase of 270 is quadrature II
+  
+  '''
+  
+  # Set up our planet. Phase zero is new.
+  planet = ProxCenB()
+  planet.t0 = 0
+  planet.mean_longitude = 90.
+  planet.arg_periastron = 0.
+  
+  # Convert time to days and make it an array if needed
+  time = int_hours / 24.
+  if not hasattr(time, '__len__'):
+    time = [time]
+    
+  # For each t in time, calculate the shift assuming t
+  # is the mid-exposure time
+  t0 = (phase / 360.) * planet.period
+  dlam = np.zeros_like(time)
+  for i, t in enumerate(time):
+    tdummy = np.linspace(t0 - t / 2., t0 + t / 2., res)
+    rv = np.array([planet.rv(td) for td in tdummy])
+    drv = np.max(rv) - np.min(rv)
+    dlam[i] = 5577.345 * (np.sqrt((1 + drv / 299792458.) / (1 - drv / 299792458.)) - 1.)
+  if len(dlam) == 1:
+    dlam = dlam[0]
+  
+  return dlam
+
+def OrbitalBroadening():
+  '''
+  This is the orbital line broadening figure from the paper.
+  
+  '''
+  
+  # Setup
+  fig = pl.figure()
+  
+  # Plot delta lambda at quadrature and halfway between quad and full phase
+  for phase, style in zip([90, 100, 135, 180], ['k-', 'k--', 'k-.', 'k:']):
+    hours = np.linspace(0, 16, 1000)
+    dlam = DeltaLambdaOrbit(hours, phase = phase)
+    pl.plot(hours, dlam, style, label = '%d$^\circ$' % phase)
+  
+  # Mark intersections with FWHM
+  pl.plot([0, 6.9], [0.014, 0.014], 'r-', lw = 2, alpha = 0.5)
+  pl.plot([9.1, 16.], [0.014, 0.014], 'r-', lw = 2, alpha = 0.5)
+  pl.annotate('FWHM', xy = (8, 0.013), xycoords = 'data', ha = 'center', va = 'center', color = 'r', alpha = 0.5, fontsize = 16)
+  for intersec, label, xytext in zip([0.6848, 0.96842, 3.94468, 15.3203], ['40 min', '1 hour', '4 hours', '15 hours'], [(-10,60), ((20, -45)), ((10, -22.5)), ((-70, -25))]):
+    pl.annotate(label, xy = (intersec, 0.014), xycoords = 'data', xytext = xytext, 
+                textcoords = 'offset points', va = 'top', ha = 'left', fontsize = 18,
+                arrowprops = dict(arrowstyle = '-', alpha = 0.5))
+    pl.plot(intersec, 0.014, 'ro')
+    
+  # Appearance
+  leg = pl.legend(loc = 'lower right', title = 'Orbital Phase')
+  leg.get_title().set_fontweight("bold")
+  pl.yscale('log')
+  pl.xlim(-0.1, 16)
+  pl.ylim(1e-6, 1)
+  pl.xlabel('Integration Time (hours)', fontsize = 22)
+  pl.ylabel('Orbital $\Delta\lambda$ $\mathrm{(\AA)}$', fontsize = 22)
+  [tick.label.set_fontsize(16) for tick in pl.gca().xaxis.get_major_ticks() + pl.gca().yaxis.get_major_ticks()]
+
+  fig.savefig('orbital_broadening.pdf', bbox_inches = 'tight')
+
 if __name__ == '__main__':
   '''
-  Usage: search.py [-h] [-p] [-l LINE]
+  Usage: search.py [-h] [-p] [-b] [-l LINE]
 
   optional arguments:
     -h, --help            Show this help message and exit.
     -p, --pbs             Run in parallel on a cluster with PBS.
     -l LINE, --line LINE  Line wavelength (angstroms). Default 5577.345.
+    -b --broad            Plot the orbital broadening figure.
+    
+  This script reproduces the figures in the HARPS search part of the paper
+  as well as the orbital broadening figure.
   
   '''
-      
+  
   with Pool() as pool:
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--pbs", action = 'store_true', help = 'Run on a PBS cluster')
-    parser.add_argument("-l", "--line", default = Spectrum.OxygenGreen, type = float, help = 'Line wavelength (angstroms)')
+    parser.add_argument("-l", "--line", default = Spectrum.OxygenGreen, type = float, help = 'Line wavelength (angstroms). Default 5577.345')
+    parser.add_argument("-b", "--broad", action = 'store_true', help = 'Plot the orbital broadening figure')
     args = parser.parse_args()
-  
-    if args.pbs:
-      PBSSearch(line = args.line)
-    else:
-      Search(line = args.line, fmap = pool.map)
+    
+    if args.broad:
+      OrbitalBroadening()
+    else:    
+      if args.pbs:
+        PBSSearch(line = args.line)
+      else:
+        Search(line = args.line, fmap = pool.map)
