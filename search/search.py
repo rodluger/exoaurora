@@ -762,7 +762,7 @@ def Search(inclination = np.arange(30., 90., 1.),
   planet.period = pbest
   planet.mean_longitude = mbest
   planet.stellar_mass = sbest
-
+  
   # --- FIGURE: Injection test (~8 sigma). This is our nominal detection threshold.
   # Note that we inject 10 angstroms redward of the line we're interested in, so we
   # don't stack an injected signal on top of an actual signal. Note also that we 
@@ -853,12 +853,12 @@ def Search(inclination = np.arange(30., 90., 1.),
   ax2[2,1].set_xlabel('Period (days)', labelpad = 8, fontsize = 18)
   ax2[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 18)
   fig2.savefig('%s_triangle.pdf' % pref, bbox_inches = 'tight')
-
+  
   #--- FIGURE: Plot bmax versus wavelength
   print("Plotting signal vs wavelength...")
   fig4, ax4 = pl.subplots(1, figsize = (12,4))
   ax4.plot(bins, bmax - 1., 'k-', lw = 0.5, zorder = -2)
-  ax4.plot(line, blinemax - 1., 'ro', markeredgecolor = 'none')
+  ax4.plot(line, blinemax - 1., 'ro', markersize = 10, markeredgecolor = 'none')
   ax4.axhline(blinemax - 1., color = 'r', ls = '--')
   ax4.margins(0, None)
   ax4.yaxis.set_major_locator(MaxNLocator(nbins = 5))
@@ -906,7 +906,7 @@ if __name__ == '__main__':
     -l LINE, --line LINE  Line wavelength (angstroms). Default 5577.345.
   
   '''
-  
+      
   with Pool() as pool:
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--pbs", action = 'store_true', help = 'Run on a PBS cluster')
