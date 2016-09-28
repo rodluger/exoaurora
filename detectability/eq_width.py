@@ -10,9 +10,11 @@ Visualize the line's equivalent width as a function of contrast ratio.
 from __future__ import print_function, division
 import numpy as np
 import contrast_utils as cu
+import coronagraph_inputs as ci
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib import gridspec
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset, inset_axes
@@ -29,9 +31,9 @@ show_spec = False
 
 show_eqw = False
 
-show_contrast_contour = True
+show_contrast_contour = False
 
-show_time_contour = False
+show_time_contour = True
 
 save_plots = True
 
@@ -254,10 +256,22 @@ if show_contrast_contour:
     # Compute equivlent resolving power (?)
     ew_r = lam_0/ew
 
-    fig, ax = plt.subplots()
+    mpl.rcParams['figure.figsize'] = (10,10)
+
+    # Create figure
+    #fig, ax = plt.subplots()
+    fig = plt.figure()
+    gs = gridspec.GridSpec(2,1, height_ratios=[0.05, 1.0])
+    plt.subplots_adjust(wspace=0, hspace=0.16)
+    ax = plt.subplot(gs[1])
+    cbar_ax = plt.subplot(gs[0])
+
 
     vmin = contrast.min()
     vmax = contrast.max()
+
+    # Convert watts to TW
+    watts = watts / 1e12
 
     # Color contour
     cax = ax.pcolor(watts, resolver, contrast.T, cmap="viridis",
@@ -274,14 +288,15 @@ if show_contrast_contour:
     cln = ax.contour(watts, resolver, contrast.T, contour_levels,
                      colors=["black","black", "black", "black", "black"])
     plt.clabel(cln, inline=1, fontsize=15.5,
-               fmt=fmt, inline_spacing=20,
+               fmt=fmt, inline_spacing=30,
                use_clabeltext=True)#, manual=manual_locations)
     # Thicken the contour lines
     plt.setp(cln.collections, linewidth=2)
 
     # Colorbar
-    cbar = fig.colorbar(cax)
-    cbar.set_label(r"Planet-Star Contrast", rotation=270, labelpad=25)
+    cbar = fig.colorbar(cax, cax=cbar_ax, orientation="horizontal")
+    cbar.set_label(r"Planet-Star Contrast", rotation=0, labelpad=-85)
+    cbar_ax.tick_params(labelsize=26.0)
 
     # Plot equivalent resolving power (equivalent width converted to resolving
     # power at 5577 angstroms)
@@ -298,7 +313,7 @@ if show_contrast_contour:
     ax.set_yscale("log")
 
     # Axis lables
-    ax.set_xlabel(r"OI Auroral Power [W]")
+    ax.set_xlabel(r"OI Auroral Power [TW]")
     ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
 
     # Legend
@@ -311,7 +326,7 @@ if show_contrast_contour:
     plt.show()
 
     if save_plots:
-        fig.savefig("contrast_vs_R_vs_watts.pdf", bbox_inches='tight')
+        fig.savefig("contrast_vs_R_vs_watts_new.pdf", bbox_inches='tight')
 
 if show_time_contour:
 
@@ -381,10 +396,10 @@ if show_time_contour:
             nbins = int(np.ceil(FWHM / dl))
 
             # LUVOIR-concept space-based telescope
-            luvoir = cu.Telescope(D=16., R=resolver[jj], bins=nbins)
+            tmt = cu.Telescope(D=30., R=resolver[jj], bins=nbins)
 
             # Compute integration time
-            exptime[ii,jj] = luvoir.int_time(SN, proxcen, watts[ii], lam_0,
+            exptime[ii,jj] = tmt.int_time(SN, proxcen, watts[ii], lam_0,
                                              coronagraph=True)
             # End inner loop
 
@@ -397,62 +412,83 @@ if show_time_contour:
     # Compute equivlent resolving power (?)
     ew_r = lam_0/ew
 
-    # Create figure
-    fig, ax = plt.subplots()
+    # Save data?
+    if False:
+        np.savez("TMTC_int_time_C"+("%.0e" % ci.C)+"_NOnoise.npz", resolver, exptime)
 
-    vmin = exptime.min()
-    vmax = 365*24 #exptime.max()
+    # Make plot?
+    if True:
 
-    # Color contour
-    cax = ax.pcolor(watts, resolver, exptime.T, cmap="viridis_r",
-                    norm=colors.LogNorm(vmin=vmin,vmax=vmax))
+        mpl.rcParams['figure.figsize'] = (10,10)
 
-    # Contour Lines
-    contour_levels = np.array([1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3])
-    inline = 0
-    # Automate "manual locations" for contour labels
-    #ia = (np.abs(watts-6.5e14)).argmin() # A. Power index
-    #ic = [np.abs(contrast[ia, :] - clvl).argmin() for clvl in contour_levels]
-    #manual_locations = [(watts[ia], ic[i]) for i in range(len(contour_levels))]
-    # Log levels
-    fmt = ticker.LogFormatterMathtext()
-    cln = ax.contour(watts, resolver, exptime.T, contour_levels,
-                     colors="black")
-    #plt.clabel(cln, inline=inline, fontsize=infig_font_size, fmt=fmt, inline_spacing=1,
-    #           use_clabeltext=True)#, manual=manual_locations)
-    # Thicken the contour lines
-    plt.setp(cln.collections, linewidth=2)
+        # Create figure
+        #fig, ax = plt.subplots()
+        fig = plt.figure()
+        gs = gridspec.GridSpec(2,1, height_ratios=[0.05, 1.0])
+        plt.subplots_adjust(wspace=0, hspace=0.16)
+        ax = plt.subplot(gs[1])
+        cbar_ax = plt.subplot(gs[0])
 
-    # Colorbar
-    cbar = fig.colorbar(cax)
-    cbar.set_label(r"Integration Time [hrs]", rotation=270, labelpad=25)
+        vmin = exptime.min()
+        vmax = 365*24 #exptime.max()
 
-    # Plot equivalent resolving power (equivalent width converted to resolving
-    # power at 5577 angstroms)
-    ax.plot(watts,ew_r, color="white", lw=3, ls="--",
-            label=r"Equiv. Resolving Power ($\lambda / W_{\lambda}$)")
+        # Convert watts to TW
+        watts = watts / 1e12
 
-    # Plot limiting resolving power
-    ax.axhline(R_limit,color="orange", ls="--", lw=3,
-               label=r"Limiting Resolving Power")
+        # Color contour
+        cax = ax.pcolor(watts, resolver, exptime.T, cmap="viridis_r",
+                        norm=colors.LogNorm(vmin=vmin,vmax=vmax))
 
-    # Axis Format
-    ax.set_ylim(resolver.min(),resolver.max())
-    ax.set_xscale("log")
-    ax.set_yscale("log")
+        # Contour Lines
+        contour_levels = np.array([1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3])
+        # Automate "manual locations" for contour labels
+        ypos = 2e5
+        iy = (np.abs(resolver-ypos)).argmin() # R. Power index
+        ix = np.array([np.abs(exptime[:, iy] - clvl).argmin() for clvl in contour_levels])
+        manual_locations = ((watts[ix[i]], resolver[iy]) for i in range(len(contour_levels)))
+        # Log levels
+        fmt = ticker.LogFormatterMathtext()
+        cln = ax.contour(watts, resolver, exptime.T, contour_levels,
+                         colors="black")
+        plt.clabel(cln, inline=1, fontsize=15.5, fmt=fmt, inline_spacing=30,
+                   use_clabeltext=True, manual=manual_locations)
+        # Thicken the contour lines
+        plt.setp(cln.collections, linewidth=2)
 
-    # Axis lables
-    ax.set_xlabel(r"OI Auroral Power [W]")
-    ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
+        # Colorbar
+        cbar = fig.colorbar(cax, cax=cbar_ax, orientation="horizontal")
+        cbar.set_label(r"Integration Time [hrs]", rotation=0, labelpad=-85)
+        cbar_ax.tick_params(labelsize=26.0)
 
-    # Legend
-    leg=ax.legend(loc=0, fontsize=infig_font_size)
-    leg.get_frame().set_alpha(0.0)
-    for text in leg.get_texts():
-        text.set_color("white")
-        text.set_va('center') # va is alias for "verticalalignment"
+        # Plot equivalent resolving power (equivalent width converted to resolving
+        # power at 5577 angstroms)
+        ax.plot(watts,ew_r, color="white", lw=3, ls="--",
+                label=r"Equiv. Resolving Power ($\lambda / W_{\lambda}$)")
 
-    plt.show()
+        # Plot limiting resolving power
+        ax.axhline(R_limit,color="orange", ls="--", lw=3,
+                   label=r"FWHM Resolving Power ($\lambda / FWHM$)")
 
-    if save_plots:
-        fig.savefig("exptime_vs_R_vs_watts.pdf", bbox_inches='tight')
+        #ax.axhline(115000.,color="red", ls="--", lw=3,
+        #           label=r"$R=115,000$")
+
+        # Axis Format
+        ax.set_ylim(resolver.min(),resolver.max())
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+
+        # Axis lables
+        ax.set_xlabel(r"OI Auroral Power [TW]")
+        ax.set_ylabel(r"Resolving Power ($\lambda / \Delta \lambda$)")
+
+        # Legend
+        leg=ax.legend(loc=0, fontsize=infig_font_size)
+        leg.get_frame().set_alpha(0.0)
+        for text in leg.get_texts():
+            text.set_color("white")
+            text.set_va('center') # va is alias for "verticalalignment"
+
+        plt.show()
+
+        if save_plots:
+            fig.savefig("exptime_B_inline_TMTC-7_noInstrumental_new.pdf", bbox_inches='tight')
