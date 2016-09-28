@@ -10,7 +10,7 @@ Searching the HARPS data for the OI emission signal.
 
 from __future__ import division, print_function, absolute_import, unicode_literals
 from pool import Pool
-import matplotlib as mpl # debug; mpl.use('Agg')
+import matplotlib as mpl; mpl.use('Agg')
 mpl.rcParams['font.family'] = ['serif']
 mpl.rcParams['font.serif'] = ['Times New Roman']
 from kepler import RadialVelocity
@@ -315,7 +315,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
     spec_amp = 0.01
     stack_lims = [(0.99, 1.02), (0.99, 1.02)]
     wpca_weights = 'exptime'
-  
+    
   # Crop to a smaller window centered on the line
   inds = np.where((wav >= line - wpca_sz / 2.) & (wav <= line + wpca_sz / 2.))[0]
   wav = wav[inds]
@@ -461,7 +461,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
     # User-defined filter
     if not eval(spectrum_filter):
       continue
-    
+
     # Compute the planet mask in the stellar frame. If the planet is moving away
     # from us (redshifted), we REDSHIFT the line accordingly.
     x = ApplyDopplerFactor(line, pdf[i])
@@ -478,7 +478,7 @@ def Compute(planet = ProxCenB(), line = Spectrum.OxygenGreen, plot = True,
       # Is the spectrum too noisy?
       if np.std(y0 / np.nanmedian(y0)) > max_frac_noise:
         continue
-           
+      
       # DOPPLER SHIFTING SANITY CHECK:
       #
       #   if (planet.phase(jd[i]) < 0.22) and (planet.phase(jd[i]) > 0.18):
@@ -743,7 +743,7 @@ def Search(inclination = np.arange(30., 90., 1.),
     mean_longitude = data['mean_longitude']
     stellar_mass = data['stellar_mass']
     params = data['params']
-  
+    
   # Here we compute the distribution of the values of the
   # maximum signals at each wavelength (to compute significance later)
   bmax = np.max(bflx, axis = (1,2,3,4))
@@ -762,7 +762,7 @@ def Search(inclination = np.arange(30., 90., 1.),
   planet.period = pbest
   planet.mean_longitude = mbest
   planet.stellar_mass = sbest
-
+  
   # --- FIGURE: Injection test (~8 sigma). This is our nominal detection threshold.
   # Note that we inject 10 angstroms redward of the line we're interested in, so we
   # don't stack an injected signal on top of an actual signal. Note also that we 
@@ -853,12 +853,12 @@ def Search(inclination = np.arange(30., 90., 1.),
   ax2[2,1].set_xlabel('Period (days)', labelpad = 8, fontsize = 18)
   ax2[2,2].set_xlabel('Mean longitude ($^\circ$)', labelpad = 17, fontsize = 18)
   fig2.savefig('%s_triangle.pdf' % pref, bbox_inches = 'tight')
-
+  
   #--- FIGURE: Plot bmax versus wavelength
   print("Plotting signal vs wavelength...")
   fig4, ax4 = pl.subplots(1, figsize = (12,4))
   ax4.plot(bins, bmax - 1., 'k-', lw = 0.5, zorder = -2)
-  ax4.plot(line, blinemax - 1., 'ro', markeredgecolor = 'none')
+  ax4.plot(line, blinemax - 1., 'ro', markersize = 10, markeredgecolor = 'none')
   ax4.axhline(blinemax - 1., color = 'r', ls = '--')
   ax4.margins(0, None)
   ax4.yaxis.set_major_locator(MaxNLocator(nbins = 5))
@@ -895,25 +895,107 @@ def Search(inclination = np.arange(30., 90., 1.),
   [tick.label.set_fontsize(16) for tick in ax3.xaxis.get_major_ticks() + ax3.yaxis.get_major_ticks()]
   fig3.savefig('%s_fap.pdf' % pref, bbox_inches = 'tight')
 
-# Reproduce Figures 2-6 in the paper
+def DeltaLambdaOrbit(int_hours, phase = 'quad', res = 100):
+  '''
+  
+  Calculates the broadening of the line due to a finite exposure centered
+  at a certain phase.
+  
+  phase of 0 is new (transit)
+  phase of 90 is quadrature I
+  phase of 180 is full (occultation)
+  phase of 270 is quadrature II
+  
+  '''
+  
+  # Set up our planet. Phase zero is new.
+  planet = ProxCenB()
+  planet.t0 = 0
+  planet.mean_longitude = 90.
+  planet.arg_periastron = 0.
+  
+  # Convert time to days and make it an array if needed
+  time = int_hours / 24.
+  if not hasattr(time, '__len__'):
+    time = [time]
+    
+  # For each t in time, calculate the shift assuming t
+  # is the mid-exposure time
+  t0 = (phase / 360.) * planet.period
+  dlam = np.zeros_like(time)
+  for i, t in enumerate(time):
+    tdummy = np.linspace(t0 - t / 2., t0 + t / 2., res)
+    rv = np.array([planet.rv(td) for td in tdummy])
+    drv = np.max(rv) - np.min(rv)
+    dlam[i] = 5577.345 * (np.sqrt((1 + drv / 299792458.) / (1 - drv / 299792458.)) - 1.)
+  if len(dlam) == 1:
+    dlam = dlam[0]
+  
+  return dlam
+
+def OrbitalBroadening():
+  '''
+  This is the orbital line broadening figure from the paper.
+  
+  '''
+  
+  # Setup
+  fig = pl.figure()
+  
+  # Plot delta lambda at quadrature and halfway between quad and full phase
+  for phase, style in zip([90, 100, 135, 180], ['k-', 'k--', 'k-.', 'k:']):
+    hours = np.linspace(0, 16, 1000)
+    dlam = DeltaLambdaOrbit(hours, phase = phase)
+    pl.plot(hours, dlam, style, label = '%d$^\circ$' % phase)
+  
+  # Mark intersections with FWHM
+  pl.plot([0, 6.9], [0.014, 0.014], 'r-', lw = 2, alpha = 0.5)
+  pl.plot([9.1, 16.], [0.014, 0.014], 'r-', lw = 2, alpha = 0.5)
+  pl.annotate('FWHM', xy = (8, 0.013), xycoords = 'data', ha = 'center', va = 'center', color = 'r', alpha = 0.5, fontsize = 16)
+  for intersec, label, xytext in zip([0.6848, 0.96842, 3.94468, 15.3203], ['40 min', '1 hour', '4 hours', '15 hours'], [(-10,60), ((20, -45)), ((10, -22.5)), ((-70, -25))]):
+    pl.annotate(label, xy = (intersec, 0.014), xycoords = 'data', xytext = xytext, 
+                textcoords = 'offset points', va = 'top', ha = 'left', fontsize = 18,
+                arrowprops = dict(arrowstyle = '-', alpha = 0.5))
+    pl.plot(intersec, 0.014, 'ro')
+    
+  # Appearance
+  leg = pl.legend(loc = 'lower right', title = 'Orbital Phase')
+  leg.get_title().set_fontweight("bold")
+  pl.yscale('log')
+  pl.xlim(-0.1, 16)
+  pl.ylim(1e-6, 1)
+  pl.xlabel('Integration Time (hours)', fontsize = 22)
+  pl.ylabel('Orbital $\Delta\lambda$ $\mathrm{(\AA)}$', fontsize = 22)
+  [tick.label.set_fontsize(16) for tick in pl.gca().xaxis.get_major_ticks() + pl.gca().yaxis.get_major_ticks()]
+
+  fig.savefig('orbital_broadening.pdf', bbox_inches = 'tight')
+
 if __name__ == '__main__':
   '''
-  Usage: search.py [-h] [-p] [-l LINE]
+  Usage: search.py [-h] [-p] [-b] [-l LINE]
 
   optional arguments:
     -h, --help            Show this help message and exit.
     -p, --pbs             Run in parallel on a cluster with PBS.
     -l LINE, --line LINE  Line wavelength (angstroms). Default 5577.345.
+    -b --broad            Plot the orbital broadening figure.
+    
+  This script reproduces the figures in the HARPS search part of the paper
+  as well as the orbital broadening figure.
   
   '''
   
   with Pool() as pool:
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--pbs", action = 'store_true', help = 'Run on a PBS cluster')
-    parser.add_argument("-l", "--line", default = Spectrum.OxygenGreen, type = float, help = 'Line wavelength (angstroms)')
+    parser.add_argument("-l", "--line", default = Spectrum.OxygenGreen, type = float, help = 'Line wavelength (angstroms). Default 5577.345')
+    parser.add_argument("-b", "--broad", action = 'store_true', help = 'Plot the orbital broadening figure')
     args = parser.parse_args()
-  
-    if args.pbs:
-      PBSSearch(line = args.line)
-    else:
-      Search(line = args.line, fmap = pool.map)
+    
+    if args.broad:
+      OrbitalBroadening()
+    else:    
+      if args.pbs:
+        PBSSearch(line = args.line)
+      else:
+        Search(line = args.line, fmap = pool.map)
