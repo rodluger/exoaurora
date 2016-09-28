@@ -26,22 +26,22 @@ mpl.rc('text', usetex=True)
 
 # Import from npz
 
-nfile = np.load("TMTC_int_time_C1e-05_NOnoise.npz")
-resolver, CN5 = nfile["arr_0"], nfile["arr_1"]
-nfile = np.load("TMTC_int_time_C1e-06_NOnoise.npz")
-resolver, CN6 = nfile["arr_0"], nfile["arr_1"]
-nfile = np.load("TMTC_int_time_C1e-07_NOnoise.npz")
-resolver, CN7 = nfile["arr_0"], nfile["arr_1"]
+nfile = np.load("TMTC_int_time_C1e-05_NOnoise2.npz")
+resolver, watts, CN5 = nfile["arr_0"], nfile["arr_1"], nfile["arr_2"]
+nfile = np.load("TMTC_int_time_C1e-06_NOnoise2.npz")
+resolver, watts, CN6 = nfile["arr_0"], nfile["arr_1"], nfile["arr_2"]
+nfile = np.load("TMTC_int_time_C1e-07_NOnoise2.npz")
+resolver, watts, CN7 = nfile["arr_0"], nfile["arr_1"], nfile["arr_2"]
 
-nfile = np.load("TMTC_int_time_C1e-05_noise.npz")
-resolver, C5 = nfile["arr_0"], nfile["arr_1"]
-nfile = np.load("TMTC_int_time_C1e-06_noise.npz")
-resolver, C6 = nfile["arr_0"], nfile["arr_1"]
-nfile = np.load("TMTC_int_time_C1e-07_noise.npz")
-resolver, C7 = nfile["arr_0"], nfile["arr_1"]
+nfile = np.load("TMTC_int_time_C1e-05_noise2.npz")
+resolver, watts, C5 = nfile["arr_0"], nfile["arr_1"], nfile["arr_2"]
+nfile = np.load("TMTC_int_time_C1e-06_noise2.npz")
+resolver, watts, C6 = nfile["arr_0"], nfile["arr_1"], nfile["arr_2"]
+nfile = np.load("TMTC_int_time_C1e-07_noise2.npz")
+resolver, watts, C7 = nfile["arr_0"], nfile["arr_1"], nfile["arr_2"]
 
 lw = 3.0
-bins = 100
+bins = 200
 aurora = 0.1
 
 watts = np.logspace(9,15,bins) / 1e12   # Auroral power [TW]
@@ -84,5 +84,5 @@ for text in leg.get_texts():
 
 plt.show()
 
-if False:
-    fig.savefig("steadystate_contrast.pdf", bbox_inches='tight')
+if True:
+    fig.savefig("steadystate_contrast2.pdf", bbox_inches='tight')
