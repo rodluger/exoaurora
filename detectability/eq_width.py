@@ -35,7 +35,7 @@ show_contrast_contour = False
 
 show_time_contour = True
 
-save_plots = True
+save_plots = False
 
 # Init system object with Proxima Centauri defaults
 proxcen = cu.System()
@@ -335,7 +335,7 @@ if show_time_contour:
     infig_font_size = 18.0
 
     # Contrast, Resolving power, auroral power grid
-    bins = 100
+    bins = 200
 
     # FWHM from Eric
     Temp = 200.0 # K
@@ -413,11 +413,11 @@ if show_time_contour:
     ew_r = lam_0/ew
 
     # Save data?
-    if False:
-        np.savez("TMTC_int_time_C"+("%.0e" % ci.C)+"_NOnoise.npz", resolver, exptime)
+    if True:
+        np.savez("TMTC_int_time_C"+("%.0e" % ci.C)+"_noise2.npz", resolver, watts, exptime)
 
     # Make plot?
-    if True:
+    if False:
 
         mpl.rcParams['figure.figsize'] = (10,10)
 
