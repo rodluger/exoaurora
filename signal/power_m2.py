@@ -60,47 +60,47 @@ print( '-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
 dist = asig.mpause_dist()
-print( ' estimated sub-stellar magnetopause distance: %.2e' % dist + ' m\n' )
+print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
 oval = asig.auroral_oval()*1.e4
-print( ' estimated auroral oval area: %.2e' % oval + ' cm^2\n' )
+print( ' estimated auroral oval area: %.3e' % oval + ' cm^2\n' )
 
 print( ' estimated auroral energetic particle power delivered to auroral regions:\n' )
 
 # quiet magnetosphere
 power_out_q = asig.power_calc()
-print( ' quiet\t\t-\t%.2e' % power_out_q + ' w' )
+print( ' quiet\t\t-\t%.3e' % power_out_q + ' w' )
 
 # stormy magnetosphere
 power_out_s = asig.power_calc( theta=spcon.pi )
-print( ' substorm\t-\t%.2e' % power_out_s + ' w' )
+print( ' substorm\t-\t%.3e' % power_out_s + ' w' )
 
 # cme wind conditions
 power_out_c = asig.power_calc()*cme_scale
-print( ' cme\t\t-\t%.2e' % power_out_c + ' w' )
+print( ' cme\t\t-\t%.3e' % power_out_c + ' w' )
 
 # cme wind conditions + stormy magnetosphere
 power_out_cs = asig.power_calc( theta=spcon.pi )*cme_scale
-print( ' cme+substorm\t-\t%.2e' % power_out_cs + ' w' )
+print( ' cme+substorm\t-\t%.3e' % power_out_cs + ' w' )
 
 print( '\n estimated auroral power for the oi 5577 a line:\n' )
 
 # 5577 power out for quiet msphere, both hemispheres
 out_5577_q = oi_eff*power_out_q*1.e7*e_frac*2*e_5577
-print( ' quiet 5577\t-\t%.2e' % out_5577_q + ' w' )
+print( ' quiet 5577\t-\t%.3e' % out_5577_q + ' w' )
 
 # 5577 power out for stormy msphere, both hemispheres
 out_5577_s = oi_eff*power_out_s*1.e7*e_frac*2*e_5577
-print( ' substorm 5577\t-\t%.2e' % out_5577_s + ' w' )
+print( ' substorm 5577\t-\t%.3e' % out_5577_s + ' w' )
 
 # 5577 power out for cme winds, both hemispheres
 out_5577_c = oi_eff*power_out_c*1.e7*e_frac*2*e_5577
-print( ' cme 5577\t-\t%.2e' % out_5577_c + ' w' )
+print( ' cme 5577\t-\t%.3e' % out_5577_c + ' w' )
 
 # 5577 power out for cme winds + stormy msphere, both hemispheres
 out_5577_cs = oi_eff*power_out_cs*1.e7*e_frac*2*e_5577
-print( ' cme+ss 5577\t-\t%.2e' % out_5577_cs + ' w' )
+print( ' cme+ss 5577\t-\t%.3e' % out_5577_cs + ' w' )
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -111,11 +111,11 @@ print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
 dist = asig.mpause_dist( nsub, la.norm(vsub), tsub, la.norm(bsub), asig.m_earth )
-print( ' estimated sub-stellar magnetopause distance: %.2e' % dist + ' m\n' )
+print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
 oval = asig.auroral_oval( dist )*1.e4
-print( ' estimated auroral oval area: %.2e' % oval + ' cm^2\n' )
+print( ' estimated auroral oval area: %.3e' % oval + ' cm^2\n' )
 
 # imf clock angle and transverse imf
 imf_clock = np.arctan2( abs(bsub[1]), bsub[2] )
@@ -125,37 +125,37 @@ print( ' estimated auroral energetic particle power delivered to auroral regions
 
 # quiet magnetosphere
 power_out_q = asig.power_calc( nsub, la.norm(vsub), b_t, imf_clock, asig.m_earth )
-print( ' quiet\t\t-\t%.2e' % power_out_q + ' w' )
+print( ' quiet\t\t-\t%.3e' % power_out_q + ' w' )
 
 # stormy magnetosphere
 power_out_s = asig.power_calc( nsub, la.norm(vsub), b_t, spcon.pi, asig.m_earth )
-print( ' substorm\t-\t%.2e' % power_out_s + ' w' )
+print( ' substorm\t-\t%.3e' % power_out_s + ' w' )
 
 # cme wind conditions
 power_out_c = asig.power_calc( nsub, la.norm(vsub), b_t, imf_clock, asig.m_earth )*cme_scale
-print( ' cme\t\t-\t%.2e' % power_out_c + ' w' )
+print( ' cme\t\t-\t%.3e' % power_out_c + ' w' )
 
 # cme wind conditions + stormy magnetosphere
 power_out_cs = asig.power_calc( nsub, la.norm(vsub), b_t, spcon.pi, asig.m_earth )*cme_scale
-print( ' cme+substorm\t-\t%.2e' % power_out_cs + ' w' )
+print( ' cme+substorm\t-\t%.3e' % power_out_cs + ' w' )
 
 print( '\n estimated auroral power for the oi 5577 a line:\n' )
 
 # 5577 power out for quiet msphere, both hemispheres
 out_5577_q = oi_eff*power_out_q*1.e7*e_frac*2*e_5577
-print( ' quiet 5577\t-\t%.2e' % out_5577_q + ' w' )
+print( ' quiet 5577\t-\t%.3e' % out_5577_q + ' w' )
 
 # 5577 power out for stormy msphere, both hemispheres
 out_5577_s = oi_eff*power_out_s*1.e7*e_frac*2*e_5577
-print( ' substorm 5577\t-\t%.2e' % out_5577_s + ' w' )
+print( ' substorm 5577\t-\t%.3e' % out_5577_s + ' w' )
 
 # 5577 power out for cme winds, both hemispheres
 out_5577_c = oi_eff*power_out_c*1.e7*e_frac*2*e_5577
-print( ' cme 5577\t-\t%.2e' % out_5577_c + ' w' )
+print( ' cme 5577\t-\t%.3e' % out_5577_c + ' w' )
 
 # 5577 power out for cme winds + stormy msphere, both hemispheres
 out_5577_cs = oi_eff*power_out_cs*1.e7*e_frac*2*e_5577
-print( ' cme+ss 5577\t-\t%.2e' % out_5577_cs + ' w' )
+print( ' cme+ss 5577\t-\t%.3e' % out_5577_cs + ' w' )
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -166,11 +166,11 @@ print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
 dist = asig.mpause_dist( nsup, la.norm(vsup), tsup, la.norm(bsup), asig.m_earth )
-print( ' estimated sub-stellar magnetopause distance: %.2e' % dist + ' m\n' )
+print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
 oval = asig.auroral_oval( dist )*1.e4
-print( ' estimated auroral oval area: %.2e' % oval + ' cm^2\n' )
+print( ' estimated auroral oval area: %.3e' % oval + ' cm^2\n' )
 
 # imf clock angle and transverse imf
 imf_clock = np.arctan2( abs(bsup[1]), bsup[2] )
@@ -180,37 +180,37 @@ print( ' estimated auroral energetic particle power delivered to auroral regions
 
 # quiet magnetosphere
 power_out_q = asig.power_calc( nsup, la.norm(vsup), b_t, imf_clock, asig.m_earth )
-print( ' quiet\t\t-\t%.2e' % power_out_q + ' w' )
+print( ' quiet\t\t-\t%.3e' % power_out_q + ' w' )
 
 # stormy magnetosphere
 power_out_s = asig.power_calc( nsup, la.norm(vsup), b_t, spcon.pi, asig.m_earth )
-print( ' substorm\t-\t%.2e' % power_out_s + ' w' )
+print( ' substorm\t-\t%.3e' % power_out_s + ' w' )
 
 # cme wind conditions
 power_out_c = asig.power_calc( nsup, la.norm(vsup), b_t, imf_clock, asig.m_earth )*cme_scale
-print( ' cme\t\t-\t%.2e' % power_out_c + ' w' )
+print( ' cme\t\t-\t%.3e' % power_out_c + ' w' )
 
 # cme wind conditions + stormy magnetosphere
 power_out_cs = asig.power_calc( nsup, la.norm(vsup), b_t, spcon.pi, asig.m_earth )*cme_scale
-print( ' cme+substorm\t-\t%.2e' % power_out_cs + ' w' )
+print( ' cme+substorm\t-\t%.3e' % power_out_cs + ' w' )
 
 print( '\n estimated auroral power for the oi 5577 a line:\n' )
 
 # 5577 power out for quiet msphere, both hemispheres
 out_5577_q = oi_eff*power_out_q*1.e7*e_frac*2*e_5577
-print( ' quiet 5577\t-\t%.2e' % out_5577_q + ' w' )
+print( ' quiet 5577\t-\t%.3e' % out_5577_q + ' w' )
 
 # 5577 power out for stormy msphere, both hemispheres
 out_5577_s = oi_eff*power_out_s*1.e7*e_frac*2*e_5577
-print( ' substorm 5577\t-\t%.2e' % out_5577_s + ' w' )
+print( ' substorm 5577\t-\t%.3e' % out_5577_s + ' w' )
 
 # 5577 power out for cme winds, both hemispheres
 out_5577_c = oi_eff*power_out_c*1.e7*e_frac*2*e_5577
-print( ' cme 5577\t-\t%.2e' % out_5577_c + ' w' )
+print( ' cme 5577\t-\t%.3e' % out_5577_c + ' w' )
 
 # 5577 power out for cme winds + stormy msphere, both hemispheres
 out_5577_cs = oi_eff*power_out_cs*1.e7*e_frac*2*e_5577
-print( ' cme+ss 5577\t-\t%.2e' % out_5577_cs + ' w' )
+print( ' cme+ss 5577\t-\t%.3e' % out_5577_cs + ' w' )
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -221,11 +221,11 @@ print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
 dist = asig.mpause_dist( nsub, la.norm(vsub), tsub, la.norm(bsub), asig.m_neptune )
-print( ' estimated sub-stellar magnetopause distance: %.2e' % dist + ' m\n' )
+print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
 oval = asig.auroral_oval( dist )*1.e4
-print( ' estimated auroral oval area: %.2e' % oval + ' cm^2\n' )
+print( ' estimated auroral oval area: %.3e' % oval + ' cm^2\n' )
 
 # imf clock angle and transverse imf
 imf_clock = np.arctan2( abs(bsub[1]), bsub[2] )
@@ -235,37 +235,37 @@ print( ' estimated auroral energetic particle power delivered to auroral regions
 
 # quiet magnetosphere
 power_out_q = asig.power_calc( nsub, la.norm(vsub), b_t, imf_clock, asig.m_neptune )
-print( ' quiet\t\t-\t%.2e' % power_out_q + ' w' )
+print( ' quiet\t\t-\t%.3e' % power_out_q + ' w' )
 
 # stormy magnetosphere
 power_out_s = asig.power_calc( nsub, la.norm(vsub), b_t, spcon.pi, asig.m_neptune )
-print( ' substorm\t-\t%.2e' % power_out_s + ' w' )
+print( ' substorm\t-\t%.3e' % power_out_s + ' w' )
 
 # cme wind conditions
 power_out_c = asig.power_calc( nsub, la.norm(vsub), b_t, imf_clock, asig.m_neptune )*cme_scale
-print( ' cme\t\t-\t%.2e' % power_out_c + ' w' )
+print( ' cme\t\t-\t%.3e' % power_out_c + ' w' )
 
 # cme wind conditions + stormy magnetosphere
 power_out_cs = asig.power_calc( nsub, la.norm(vsub), b_t, spcon.pi, asig.m_neptune )*cme_scale
-print( ' cme+substorm\t-\t%.2e' % power_out_cs + ' w' )
+print( ' cme+substorm\t-\t%.3e' % power_out_cs + ' w' )
 
 print( '\n estimated auroral power for the oi 5577 a line:\n' )
 
 # 5577 power out for quiet msphere, both hemispheres
 out_5577_q = oi_eff*power_out_q*1.e7*e_frac*2*e_5577
-print( ' quiet 5577\t-\t%.2e' % out_5577_q + ' w' )
+print( ' quiet 5577\t-\t%.3e' % out_5577_q + ' w' )
 
 # 5577 power out for stormy msphere, both hemispheres
 out_5577_s = oi_eff*power_out_s*1.e7*e_frac*2*e_5577
-print( ' substorm 5577\t-\t%.2e' % out_5577_s + ' w' )
+print( ' substorm 5577\t-\t%.3e' % out_5577_s + ' w' )
 
 # 5577 power out for cme winds, both hemispheres
 out_5577_c = oi_eff*power_out_c*1.e7*e_frac*2*e_5577
-print( ' cme 5577\t-\t%.2e' % out_5577_c + ' w' )
+print( ' cme 5577\t-\t%.3e' % out_5577_c + ' w' )
 
 # 5577 power out for cme winds + stormy msphere, both hemispheres
 out_5577_cs = oi_eff*power_out_cs*1.e7*e_frac*2*e_5577
-print( ' cme+ss 5577\t-\t%.2e' % out_5577_cs + ' w' )
+print( ' cme+ss 5577\t-\t%.3e' % out_5577_cs + ' w' )
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -276,11 +276,11 @@ print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
 dist = asig.mpause_dist( nsup, la.norm(vsup), tsup, la.norm(bsup), asig.m_neptune )
-print( ' estimated sub-stellar magnetopause distance: %.2e' % dist + ' m\n' )
+print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
 oval = asig.auroral_oval( dist )*1.e4
-print( ' estimated auroral oval area: %.2e' % oval + ' cm^2\n' )
+print( ' estimated auroral oval area: %.3e' % oval + ' cm^2\n' )
 
 # imf clock angle and transverse imf
 imf_clock = np.arctan2( abs(bsup[1]), bsup[2] )
@@ -290,35 +290,35 @@ print( ' estimated auroral energetic particle power delivered to auroral regions
 
 # quiet magnetosphere
 power_out_q = asig.power_calc( nsup, la.norm(vsup), b_t, imf_clock, asig.m_neptune )
-print( ' quiet\t\t-\t%.2e' % power_out_q + ' w' )
+print( ' quiet\t\t-\t%.3e' % power_out_q + ' w' )
 
 # stormy magnetosphere
 power_out_s = asig.power_calc( nsup, la.norm(vsup), b_t, spcon.pi, asig.m_neptune )
-print( ' substorm\t-\t%.2e' % power_out_s + ' w' )
+print( ' substorm\t-\t%.3e' % power_out_s + ' w' )
 
 # cme wind conditions
 power_out_c = asig.power_calc( nsup, la.norm(vsup), b_t, imf_clock, asig.m_neptune )*cme_scale
-print( ' cme\t\t-\t%.2e' % power_out_c + ' w' )
+print( ' cme\t\t-\t%.3e' % power_out_c + ' w' )
 
 # cme wind conditions + stormy magnetosphere
 power_out_cs = asig.power_calc( nsup, la.norm(vsup), b_t, spcon.pi, asig.m_neptune )*cme_scale
-print( ' cme+substorm\t-\t%.2e' % power_out_cs + ' w' )
+print( ' cme+substorm\t-\t%.3e' % power_out_cs + ' w' )
 
 print( '\n estimated auroral power for the oi 5577 a line:\n' )
 
 # 5577 power out for quiet msphere, both hemispheres
 out_5577_q = oi_eff*power_out_q*1.e7*e_frac*2*e_5577
-print( ' quiet 5577\t-\t%.2e' % out_5577_q + ' w' )
+print( ' quiet 5577\t-\t%.3e' % out_5577_q + ' w' )
 
 # 5577 power out for stormy msphere, both hemispheres
 out_5577_s = oi_eff*power_out_s*1.e7*e_frac*2*e_5577
-print( ' substorm 5577\t-\t%.2e' % out_5577_s + ' w' )
+print( ' substorm 5577\t-\t%.3e' % out_5577_s + ' w' )
 
 # 5577 power out for cme winds, both hemispheres
 out_5577_c = oi_eff*power_out_c*1.e7*e_frac*2*e_5577
-print( ' cme 5577\t-\t%.2e' % out_5577_c + ' w' )
+print( ' cme 5577\t-\t%.3e' % out_5577_c + ' w' )
 
 # 5577 power out for cme winds + stormy msphere, both hemispheres
 out_5577_cs = oi_eff*power_out_cs*1.e7*e_frac*2*e_5577
-print( ' cme+ss 5577\t-\t%.2e' % out_5577_cs + ' w' )
+print( ' cme+ss 5577\t-\t%.3e' % out_5577_cs + ' w' )
 
