@@ -24,5 +24,4 @@ blackbody_real.py
 
 respectively.
 
-The link to the Meadows et al. 2016 spectra we used are
-[here](http://vpl.astro.washington.edu/spectra/stellar/proxcen.htm)
+The Proxima Centauri stellar spectrum used in this work is from Meadows et al. 2016 and can be found [here](http://vpl.astro.washington.edu/spectra/stellar/proxcen.htm).
