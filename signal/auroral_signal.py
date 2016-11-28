@@ -76,17 +76,13 @@ output:
       (float) magnetopause sub-stellar distance [m]
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 '''
-def mpause_dist( n_sw=4., v_sw=400., t_p=1.15, b_imf=5., m_p=m_earth ):
+def mpause_dist( n_sw=4., v_sw=400., m_p=m_earth ):
 
     # stellar wind ram pressure
     ram = 1.67e-27*(n_sw*1.e6)*(v_sw*1.e3)**2.
-    # stellar wind magnetic pressure
-    mag = (b_imf*1.e-9)**2./(2*mu_0)
-    # stellar wind kinetic pressure
-    kin = (n_sw*1.e6)*k_b*(t_p*1.e5)
 
     # magnetopause distance from pressure balance
-    dist = ( 4*m_p**2./(2*mu_0*(ram+mag+kin) ) )**0.166667
+    dist = ( 4*m_p**2./(2*mu_0*(ram) ) )**0.166667
 
     return dist
 
@@ -110,12 +106,12 @@ def auroral_oval( mpause=10.5*r_earth, r_p=r_earth ):
 
     # get colatitude of magnetopause foot point
     colat = np.arcsin( 1./np.sqrt( mpause/r_p ) )
-    width = 2.5/180.    # assume 5 deg auroral oval
+    width = pi*5./180.    # assume 5 deg auroral oval
 
     # integrate over spherical coords to obtain
     # steradians of coverage
     sinx = lambda x: np.sin(x)
-    frac_sr,err = integrate.quad(sinx,colat-width,colat+width)
+    frac_sr,err = integrate.quad(sinx,colat,colat+width)
 
     area = 2*pi*r_p**2.*frac_sr
 

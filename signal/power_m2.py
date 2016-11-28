@@ -21,15 +21,16 @@ import auroral_signal as asig
 relevant parameters
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 '''
+# wind parameters include relative motion of planet
 # sub-alfvenic stellar wind
 nsub = 433.                 # [cm^-3]
-vsub = [-630.,-1,30.]       # [km s^-1]
+vsub = [-630.,-48.3,30.]       # [km s^-1]
 bsub = [-804.,-173.,63.]    # [nt]
 tsub = 3.42                 # [10^5 k]
 
 # super-alfvenic stellar wind
 nsup = 12895.               # [cm^-3]
-vsup = [-202.,102.,22.]     # [km s^-1]
+vsup = [-202.,54.7,22.]     # [km s^-1]
 bsup = [-57.,-223.,92.]     # [nt]
 tsup = 4.77                 # [10^5 k]
 
@@ -39,13 +40,16 @@ cme_scale = 10**0.24 * 3.**1.47 * 15**0.86
 
 # energy per photon [j photon^-1]
 e_5577 = spcon.h*spcon.c/5.577e-7
+e_1041 = spcon.h*spcon.c/1.041e-7
 
-# electron fraction of auroral precip [arb]
+# electron fraction of auroral precip -- hubert 2002 [arb]
 e_frac = 0.8
 
 # steele & mcewen conversion efficiency [photons (erg cm^-2 s^-1)^-1]
-oi_eff = 1.55e9
+oi_eff = 1.48e9
 
+# Mauk 1994 converstion efficiency for UV band [photons (erg cm^-2 s^-1)^-1]
+uv_eff = 5.e9
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 '''
@@ -110,7 +114,7 @@ print( '\n proxima b - sub-alfvenic,earth-like dipole\n' )
 print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
-dist = asig.mpause_dist( nsub, la.norm(vsub), tsub, la.norm(bsub), asig.m_earth )
+dist = asig.mpause_dist( nsub, la.norm(vsub), asig.m_earth )
 print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
@@ -165,7 +169,7 @@ print( '\n proxima b - super-alfvenic,earth-like dipole\n' )
 print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
-dist = asig.mpause_dist( nsup, la.norm(vsup), tsup, la.norm(bsup), asig.m_earth )
+dist = asig.mpause_dist( nsup, la.norm(vsup), asig.m_earth )
 print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
@@ -220,7 +224,7 @@ print( '\n proxima b - sub-alfvenic,neptune-like dipole\n' )
 print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
-dist = asig.mpause_dist( nsub, la.norm(vsub), tsub, la.norm(bsub), asig.m_neptune )
+dist = asig.mpause_dist( nsub, la.norm(vsub), asig.m_neptune )
 print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
@@ -275,7 +279,7 @@ print( '\n proxima b - super-alfvenic,neptune-like dipole\n' )
 print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
 
 # magnetopause distance
-dist = asig.mpause_dist( nsup, la.norm(vsup), tsup, la.norm(bsup), asig.m_neptune )
+dist = asig.mpause_dist( nsup, la.norm(vsup), asig.m_neptune )
 print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
 
 # auroral oval
@@ -321,4 +325,114 @@ print( ' cme 5577\t-\t%.3e' % out_5577_c + ' w' )
 # 5577 power out for cme winds + stormy msphere, both hemispheres
 out_5577_cs = oi_eff*power_out_cs*1.e7*e_frac*2*e_5577
 print( ' cme+ss 5577\t-\t%.3e' % out_5577_cs + ' w' )
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+# power estimated at
+print( '\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-' )
+print( '\n proxima b - sub-alf neptune mass, radius and dipole\n' )
+print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
+
+# magnetopause distance
+dist = asig.mpause_dist( nsub, la.norm(vsub), asig.m_neptune )
+print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
+
+# auroral oval
+oval = asig.auroral_oval( dist, 3.883*asig.r_earth )*1.e4
+print( ' estimated auroral oval area: %.3e' % oval + ' cm^2\n' )
+
+# imf clock angle and transverse imf
+imf_clock = np.arctan2( abs(bsub[1]), bsub[2] )
+b_t = np.sqrt( bsub[1]**2. + bsub[2]**2. )
+
+print( ' estimated auroral energetic particle power delivered to auroral regions:\n' )
+
+# quiet magnetosphere
+power_out_q = asig.power_calc( nsub, la.norm(vsub), b_t, imf_clock, asig.m_neptune )
+print( ' quiet\t\t-\t%.3e' % power_out_q + ' w' )
+
+# stormy magnetosphere
+power_out_s = asig.power_calc( nsub, la.norm(vsub), b_t, spcon.pi, asig.m_neptune )
+print( ' substorm\t-\t%.3e' % power_out_s + ' w' )
+
+# cme wind conditions
+power_out_c = asig.power_calc( nsub, la.norm(vsub), b_t, imf_clock, asig.m_neptune )*cme_scale
+print( ' cme\t\t-\t%.3e' % power_out_c + ' w' )
+
+# cme wind conditions + stormy magnetosphere
+power_out_cs = asig.power_calc( nsub, la.norm(vsub), b_t, spcon.pi, asig.m_neptune )*cme_scale
+print( ' cme+substorm\t-\t%.3e' % power_out_cs + ' w' )
+
+print( '\n estimated auroral power for the 967-1115 UV band:\n' )
+
+# 5577 power out for quiet msphere, both hemispheres
+out_1041_q = uv_eff*power_out_q*1.e7*e_frac*2*e_1041
+print( ' quiet 967-1115\t\t-\t%.3e' % out_1041_q + ' w' )
+
+# 5577 power out for stormy msphere, both hemispheres
+out_1041_s = uv_eff*power_out_s*1.e7*e_frac*2*e_1041
+print( ' substorm 967-1115\t-\t%.3e' % out_1041_s + ' w' )
+
+# 5577 power out for cme winds, both hemispheres
+out_1041_c = uv_eff*power_out_c*1.e7*e_frac*2*e_1041
+print( ' cme 967-1115\t\t-\t%.3e' % out_1041_c + ' w' )
+
+# 5577 power out for cme winds + stormy msphere, both hemispheres
+out_1041_cs = uv_eff*power_out_cs*1.e7*e_frac*2*e_1041
+print( ' cme+ss 967-1115\t-\t%.3e' % out_1041_cs + ' w' )
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+# power estimated at
+print( '\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-' )
+print( '\n proxima b - super alf neptune mass, radius and dipole\n' )
+print( '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n' )
+
+# magnetopause distance
+dist = asig.mpause_dist( nsup, la.norm(vsup), asig.m_neptune )
+print( ' estimated sub-stellar magnetopause distance: %.3e' % dist + ' m\n' )
+
+# auroral oval
+oval = asig.auroral_oval( dist, 3.883*asig.r_earth )*1.e4
+print( ' estimated auroral oval area: %.3e' % oval + ' cm^2\n' )
+
+# imf clock angle and transverse imf
+imf_clock = np.arctan2( abs(bsup[1]), bsup[2] )
+b_t = np.sqrt( bsup[1]**2. + bsup[2]**2. )
+
+print( ' estimated auroral energetic particle power delivered to auroral regions:\n' )
+
+# quiet magnetosphere
+power_out_q = asig.power_calc( nsup, la.norm(vsup), b_t, imf_clock, asig.m_neptune )
+print( ' quiet\t\t-\t%.3e' % power_out_q + ' w' )
+
+# stormy magnetosphere
+power_out_s = asig.power_calc( nsup, la.norm(vsup), b_t, spcon.pi, asig.m_neptune )
+print( ' substorm\t-\t%.3e' % power_out_s + ' w' )
+
+# cme wind conditions
+power_out_c = asig.power_calc( nsup, la.norm(vsup), b_t, imf_clock, asig.m_neptune )*cme_scale
+print( ' cme\t\t-\t%.3e' % power_out_c + ' w' )
+
+# cme wind conditions + stormy magnetosphere
+power_out_cs = asig.power_calc( nsup, la.norm(vsup), b_t, spcon.pi, asig.m_neptune )*cme_scale
+print( ' cme+substorm\t-\t%.3e' % power_out_cs + ' w' )
+
+print( '\n estimated auroral power for the 967-1115 UV band:\n' )
+
+# 5577 power out for quiet msphere, both hemispheres
+out_1041_q = uv_eff*power_out_q*1.e7*e_frac*2*e_1041
+print( ' quiet 967-1115\t\t-\t%.3e' % out_1041_q + ' w' )
+
+# 5577 power out for stormy msphere, both hemispheres
+out_1041_s = uv_eff*power_out_s*1.e7*e_frac*2*e_1041
+print( ' substorm 967-1115\t-\t%.3e' % out_1041_s + ' w' )
+
+# 5577 power out for cme winds, both hemispheres
+out_1041_c = uv_eff*power_out_c*1.e7*e_frac*2*e_1041
+print( ' cme 967-1115\t\t-\t%.3e' % out_1041_c + ' w' )
+
+# 5577 power out for cme winds + stormy msphere, both hemispheres
+out_1041_cs = uv_eff*power_out_cs*1.e7*e_frac*2*e_1041
+print( ' cme+ss 967-1115\t-\t%.3e' % out_1041_cs + ' w' )
 
