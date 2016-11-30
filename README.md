@@ -3,6 +3,7 @@ exoaurora
 </h1>
 <p align="center">
   <a href="http://arxiv.org/abs/1609.09075"><img src="https://img.shields.io/badge/arXiv-1609.09075-brightgreen.svg?style=flat"/></a>
+  <a href="https://doi.org/10.5281/zenodo.187958"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.187958.svg" alt="DOI"></a>
   <a href="https://raw.githubusercontent.com/rodluger/exoaurora/master/LICENSE?token=AI5FKyB2RgXpN-0OM5HSsxq75IsQGMzXks5X8rHCwA%3D%3D"><img src="https://img.shields.io/badge/license-MIT-brightgreen.svg"/></a>
 </p>
 <p align="center"><i>
