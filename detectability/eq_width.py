@@ -27,13 +27,13 @@ mpl.rcParams['font.size'] = 30.0
 mpl.rc('font',**{'family':'serif','serif':['Computer Modern']})
 mpl.rc('text', usetex=True)
 
-show_spec = False
+show_spec = True
 
 show_eqw = False
 
 show_contrast_contour = False
 
-show_time_contour = True
+show_time_contour = False
 
 save_plots = False
 
@@ -112,7 +112,7 @@ if show_spec:
     dl = 6.33e5*FWHM # Arbitrary scaling to make plot extend to 1 micron
 
     # Auroral power
-    apow = 6.5e10
+    apow = 1.0e11
 
     wave_hires = cu.make_wave_array(lam_0,dl,FWHM)
 
@@ -194,7 +194,7 @@ if show_spec:
     plt.show()
 
     if save_plots:
-        fig.savefig("OI_ref_spec.pdf", bbox_inches='tight')
+        fig.savefig("OI_ref_spec_new.pdf", bbox_inches='tight')
 
 if show_contrast_contour:
 
