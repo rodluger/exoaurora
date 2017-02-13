@@ -21,4 +21,4 @@ I cremated Sam McGee.<br>
 
 <br>
 
-Here you will find the Python scripts used to generate the figures in [Luger et al. (2016)](tex/exoaurora.pdf), as well as general utilities for predicting/observing exo-aurorae. Check out the [signal](signal/), [detectability](detectability/), and [search](search/) sections.
+Here you will find the Python scripts used to generate the figures in [Luger et al. (2016)](http://arxiv.org/abs/1609.09075), as well as general utilities for predicting/observing exo-aurorae. Check out the [signal](signal/), [detectability](detectability/), and [search](search/) sections.
